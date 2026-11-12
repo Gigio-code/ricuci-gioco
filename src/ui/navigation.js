@@ -1,4 +1,4 @@
-import { LEVELS, orderedLevels, nextLevelFor } from '../config.js';
+import { LEVELS, orderedLevels, nextLevelFor, CONSEQUENCES as C } from '../config.js';
 import { AGENTS } from '../catalog/agents.js';
 import { CONFLICTS } from '../catalog/conflicts.js';
 import { EFFICACY } from '../catalog/efficacy.js';
@@ -16,7 +16,16 @@ export function renderHome(state,progress){
  const available=new Set(level.agents), unlockedCards=new Set(highest.agents), selected=new Set(state.deck);
  $('home-cards').innerHTML=ART_ORDER.map(id=>AGENTS[id]).map(a=>{const locked=!unlockedCards.has(a.id),status=locked?'Da sbloccare':!available.has(a.id)?'Altra formazione':selected.has(a.id)?'Nel mazzo':'Disponibile';return `<div class="home-card-item ${locked?'locked':''}" style="--agent-color:${ART_COLORS[a.id]}">${portrait(a.id)}<span class="home-agent-cost">ϟ ${a.cost}</span><span class="home-agent-name"><b>${a.name}</b><small>${status}</small></span></div>`;}).join('');
 }
-const consequences={sfotto:'Contagio: dopo 6 secondi può aprire una frattura vicina.',insulto:'Escalation: se non affrontato, aumenta il lavoro richiesto.',esclusione:'Isolamento: può chiudere temporaneamente un’altra strada.',pettegolezzo:'Diffusione: dopo 12 secondi può aprire una frattura lontana.',diffidenza:'Rallentamento: gli agenti vicini si muovono al 65% della velocità.',rivalsa:'Ritorsione: può provocare un altro conflitto.',manipolazione:'Deviazione: può imporre un percorso alternativo.',promessa:'Fiducia compromessa: gli interventi vicini usano il 75% dell’efficacia.'};
+const consequences={
+sfotto:`Contagio: dopo ${C.sfotto.delay} secondi ha il ${Math.round(C.sfotto.chance*100)}% di probabilità di aprire una frattura vicina.`,
+insulto:`Escalation: ogni ${C.insulto.interval} secondi senza interventi aggiunge ${C.insulto.increment} punti di lavoro, fino a ${C.insulto.maximum}.`,
+esclusione:'Isolamento: può chiudere temporaneamente un’altra strada.',
+pettegolezzo:`Diffusione: dopo ${C.pettegolezzo.delay} secondi ha il ${Math.round(C.pettegolezzo.chance*100)}% di probabilità di aprire una frattura lontana.`,
+diffidenza:`Rallentamento: gli agenti vicini si muovono al ${Math.round(C.diffidenza.speedFactor*100)}% della velocità.`,
+rivalsa:`Ritorsione: ogni ${C.rivalsa.interval} secondi può provocare un conflitto aggiuntivo (probabilità ${Math.round(C.rivalsa.chance*100)}%, al massimo uno).`,
+manipolazione:'Deviazione: può imporre un percorso alternativo.',
+promessa:`Fiducia compromessa: gli interventi vicini usano il ${Math.round(C.promessa.efficacyFactor*100)}% dell’efficacia.`
+};
 export function renderRules(){
  $('rules-agents').innerHTML=Object.values(AGENTS).map(a=>{const strengths=Object.values(CONFLICTS).map(f=>({name:f.name,n:EFFICACY[f.id][a.id]})).sort((x,y)=>y.n-x.n).slice(0,2).map(x=>`${x.name} ${x.n}`).join(' · ');return `<article class="rules-card" style="--agent-color:${ART_COLORS[a.id]}">${portrait(a.id)}<b>${a.name}</b><small>Costo ${a.cost} energia</small><p>${a.description}<br><strong>Punti di forza:</strong> ${strengths}.</p></article>`;}).join('');
  $('rules-conflicts').innerHTML=Object.values(CONFLICTS).map(f=>`<article class="rules-card"><svg viewBox="0 0 32 32" fill="none" stroke="#b94a3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${FRACTURE_STYLES[f.id].icon}</svg><b>${f.name}</b><p>${f.description}<br><strong>Formazione 4:</strong> ${consequences[f.id]}</p></article>`).join('');
