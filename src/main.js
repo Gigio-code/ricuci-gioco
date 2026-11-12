@@ -16,12 +16,11 @@ const store=createProgressStore(storage);const loaded=store.load();let progress=
 ui.setProgress(progress,persistent);$('level-select').value=String(progress.unlocked);renderRules();showPage('home');
 let match=new Match({level:progress.unlocked,deck:ui.deckFor(progress.unlocked)}),renderer=new ArenaRenderer($('arena'),match.state.map),resultRecorded=false;
 function reset(level=Number($('level-select').value)){
-  level=Number(level)||1;
-  if (!LEVELS[level]) return;
+  level=Math.max(1,Math.min(Number(level)||1,progress.unlocked));
   ui.reset();resultRecorded=false;match=new Match({level,deck:ui.deckFor(level)});renderer=new ArenaRenderer($('arena'),match.state.map);$('level-select').value=level;ui.update(match.state);renderHome(match.state,progress);renderer.render(match.state,ui);$('start-button').focus({preventScroll:true});
 }
 function launch(selectedLevel=Number($('level-select').value)){
-  const level=Number(selectedLevel)||1;
+  const level=Math.max(1,Math.min(Number(selectedLevel)||1,progress.unlocked));
   if (!LEVELS[level]) return;
   showPage('game');
   $('level-select').value=String(level);
@@ -70,7 +69,7 @@ for(const id of ['rules-back','rules-done'])$(id).addEventListener('click',()=>s
 document.querySelector('.rules-header .brand').addEventListener('click',e=>{e.preventDefault();showPage('home');});
 for(const id of ['close-result','review-button'])$(id).addEventListener('click',()=>$('result-dialog').close());
 $('restart-button').addEventListener('click',()=>{reset();showPage('home');});$('next-level-button').addEventListener('click',()=>{const next=nextLevelFor(match.state.level.id);if(match.state.phase==='ended'&&match.state.result?.passed&&next&&next.id<=progress.unlocked)launch(next.id);});
-$('level-select').addEventListener('change',()=>{if($('game-view').hidden)reset();});
+$('level-select').addEventListener('change',()=>{if(match.state.phase==='ready')reset();});
 document.addEventListener('keydown',e=>{
   if(document.querySelector('dialog[open]')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
   if(e.key.toLowerCase()==='p'&&!$('game-view').hidden){e.preventDefault();pauseGame();return;}
