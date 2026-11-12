@@ -69,7 +69,7 @@ for(const id of ['rules-back','rules-done'])$(id).addEventListener('click',()=>s
 document.querySelector('.rules-header .brand').addEventListener('click',e=>{e.preventDefault();showPage('home');});
 for(const id of ['close-result','review-button'])$(id).addEventListener('click',()=>$('result-dialog').close());
 $('restart-button').addEventListener('click',()=>{reset();showPage('home');});$('next-level-button').addEventListener('click',()=>{const next=nextLevelFor(match.state.level.id);if(match.state.phase==='ended'&&match.state.result?.passed&&next&&next.id<=progress.unlocked)launch(next.id);});
-$('level-select').addEventListener('change',()=>{if(match.state.phase==='ready')reset();});
+$('level-select').addEventListener('change',()=>{if($('game-view').hidden)reset();});
 document.addEventListener('keydown',e=>{
   if(document.querySelector('dialog[open]')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
   if(e.key.toLowerCase()==='p'&&!$('game-view').hidden){e.preventDefault();pauseGame();return;}
