@@ -42,7 +42,7 @@ function targetFracture(id){
   else {const f=match.state.fractures.find(f=>f.id===id);ui.message(`${CONFLICTS[f.type].name}: ${CONFLICTS[f.type].description} Scegli una carta e poi questa frattura.`);}
   ui.update(match.state);
 }
-$('start-button').addEventListener('click',()=>{const input=$('player-name');if(!input.value.trim()){input.setCustomValidity('Inserisci il tuo nome o un nome di fantasia.');input.reportValidity();input.focus();return;}input.setCustomValidity('');playerName=input.value.trim();const saved=playerStore.save(playerName);$('name-status').textContent=saved?'Nome salvato in questo browser.':'Nome valido per questa sessione; salvataggio non disponibile.';launch();});$('resume-button').addEventListener('click',()=>{if(match.state.phase==='paused')togglePause(match.state);ui.update(match.state);});
+$('start-button').addEventListener('click',()=>{const input=$('player-name');if(!input.value.trim()){input.setCustomValidity('Inserisci il tuo nome o un nome di fantasia.');input.reportValidity();input.focus();return;}input.setCustomValidity('');playerName=input.value.trim();const saved=playerStore.save(playerName);$('name-status').textContent=saved?'Nome salvato in questo browser.':'Nome valido per questa sessione; salvataggio non disponibile.';launch();});$('resume-button').addEventListener('click',()=>{if(match.state.phase==='paused')togglePause(match.state);ui.update(match.state);$('hand').querySelector('button')?.focus({preventScroll:true});});
 $('hand').addEventListener('click',e=>{const button=e.target.closest('[data-card]');if(button)ui.selectCard(button.dataset.card,match.state);});
 $('fracture-list').addEventListener('click',e=>{const button=e.target.closest('[data-fracture]');if(button)targetFracture(Number(button.dataset.fracture));});
 $('agent-list').addEventListener('click',e=>{const button=e.target.closest('[data-agent]');if(button)ui.selectAgent(Number(button.dataset.agent),match.state);});
@@ -60,6 +60,11 @@ $('medal-button').addEventListener('click',()=>{if(match.state.phase==='playing'
 $('player-form').addEventListener('submit',e=>{e.preventDefault();const input=$('player-name');input.setCustomValidity('');const name=input.value.trim();if(!name){input.setCustomValidity('Inserisci il tuo nome o un nome di fantasia.');input.reportValidity();return;}playerName=name;input.value=name;$('name-status').textContent=playerStore.save(name)?'Nome salvato in questo browser.':'Nome valido per questa sessione; salvataggio non disponibile.';});
 $('player-name').addEventListener('input',e=>e.target.setCustomValidity(''));
 $('help-button').addEventListener('click',()=>showPage('rules'));
+$('header-rules').addEventListener('click',()=>showPage('rules'));
+function pauseGame(){if(match.state.phase==='playing'||match.state.phase==='paused'){togglePause(match.state);ui.update(match.state);if(match.state.phase==='paused')$('resume-button').focus({preventScroll:true});else $('hand').querySelector('button')?.focus({preventScroll:true});}}
+$('pause-button').addEventListener('click',pauseGame);
+$('game-home').addEventListener('click',e=>{e.preventDefault();if(match.state.phase==='playing')pauseGame();});
+$('quit-button').addEventListener('click',()=>{reset();showPage('home');});
 for(const id of ['rules-back','rules-done'])$(id).addEventListener('click',()=>showPage('home'));
 document.querySelector('.rules-header .brand').addEventListener('click',e=>{e.preventDefault();showPage('home');});
 for(const id of ['close-result','review-button'])$(id).addEventListener('click',()=>$('result-dialog').close());
@@ -67,10 +72,11 @@ $('restart-button').addEventListener('click',()=>{reset();showPage('home');});$(
 $('level-select').addEventListener('change',()=>{if(match.state.phase==='ready')reset();});
 document.addEventListener('keydown',e=>{
   if(document.querySelector('dialog[open]')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+  if(e.key.toLowerCase()==='p'&&!$('game-view').hidden){e.preventDefault();pauseGame();return;}
   if(e.key==='Escape'){ui.clearSelection();ui.focusedFracture=null;ui.update(match.state);}
   if(/^[1-4]$/.test(e.key)&&match.state.phase==='playing'){e.preventDefault();ui.selectCard(match.state.hand[Number(e.key)-1],match.state);}
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&match.state.phase==='playing'){togglePause(match.state);ui.update(match.state);}});
 let previous=performance.now(),lastUI=0;
-function frame(now){const dt=Math.max(0,(now-previous)/1000);previous=now;match.advance(dt);if(match.state.phase==='ended'&&!resultRecorded){resultRecorded=true;progress=recordResult(progress,match.state.result);persistent=store.save(progress);ui.setProgress(progress,persistent);renderHome(match.state,progress);}renderer.render(match.state,ui);if(now-lastUI>100||match.state.phase==='ended'&&!ui.resultShown){ui.update(match.state);lastUI=now;}requestAnimationFrame(frame);}
+function frame(now){const dt=Math.max(0,(now-previous)/1000);previous=now;match.advance(dt);if(match.state.phase==='ended'&&!resultRecorded){resultRecorded=true;progress=recordResult(progress,match.state.result);persistent=store.save(progress);ui.setProgress(progress,persistent);renderHome(match.state,progress);}if(!$('game-view').hidden)renderer.render(match.state,ui);if(now-lastUI>100||match.state.phase==='ended'&&!ui.resultShown){ui.update(match.state);lastUI=now;}requestAnimationFrame(frame);}
 ui.update(match.state);renderHome(match.state,progress);renderer.render(match.state,ui);requestAnimationFrame(frame);

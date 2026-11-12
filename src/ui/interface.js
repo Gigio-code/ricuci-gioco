@@ -5,6 +5,7 @@ import { AGENT_ORDER, EFFICACY } from '../catalog/efficacy.js';
 import { effectDescription, interventionFactor } from '../engine/consequences.js';
 import { calculateResults } from '../engine/results.js';
 import { icon } from './icons.js';
+import { portrait, ART_COLORS } from './art.js';
 import { fractureIcon } from '../rendering/fracture-styles.js';
 const $ = id => document.getElementById(id);
 const energyLabel = value => (Math.floor((value + 1e-8) * 10) / 10).toFixed(1);
@@ -49,7 +50,7 @@ export class Interface {
   selectAgent(id,state){this.selectedAgent=this.selectedAgent===id?null:id;this.selectedCard=null;this.awaitingEnergyCard=null;this.messageUntil=0;this.update(state);}
   showDeck(level){this.deckLevel=level;this.draft=this.deckFor(level.id);this.drawDeck();$('deck-dialog').showModal();}
   drawDeck(){
-    $('deck-options').innerHTML=this.deckLevel.agents.map(id=>AGENTS[id]).map(a=>`<button class="deck-option" data-deck="${a.id}" aria-pressed="${this.draft.includes(a.id)}" style="--agent-color:${a.color}">${icon(a.icon)}<span><b>${a.name}</b><small>${a.description}</small></span><em>${a.cost} ϟ</em></button>`).join('');
+    $('deck-options').innerHTML=this.deckLevel.agents.map(id=>AGENTS[id]).map(a=>`<button class="deck-option" data-deck="${a.id}" aria-pressed="${this.draft.includes(a.id)}" style="--agent-color:${ART_COLORS[a.id]}">${portrait(a.id)}<span><b>${a.name}</b><small>${a.description}</small></span><em>${a.cost} ϟ</em></button>`).join('');
     $('deck-status').textContent=`${this.draft.length} / ${this.deckLevel.deckSize} selezionati${this.draft.length===this.deckLevel.deckSize?'':` · scegli esattamente ${this.deckLevel.deckSize} agenti`}`;$('save-deck').disabled=this.draft.length!==this.deckLevel.deckSize;
   }
   toggleDeck(id){const i=this.draft.indexOf(id);if(i>=0)this.draft.splice(i,1);else this.draft.push(id);this.drawDeck();$('deck-options').querySelector(`[data-deck="${id}"]`)?.focus({preventScroll:true});}
@@ -57,6 +58,8 @@ export class Interface {
   reset(){this.clearSelection();this.focusedFracture=null;this.gateFeedback=null;this.awaitingEnergyCard=null;this.resultShown=false;this.handSignature='';this.fractureRows.clear();this.agentRows.clear();$('fracture-list').replaceChildren();$('agent-list').replaceChildren();if($('result-dialog').open)$('result-dialog').close();}
   update(state){
     const playing=state.phase==='playing',ended=state.phase==='ended';
+    document.body.dataset.phase=state.phase;
+    $('pause-button').textContent=state.phase==='paused'?'Riprendi':'Pausa';
     $('effect-legend').classList.toggle('hidden',!state.level.consequences);
     if(this.selectedAgent&&!state.agents.some(a=>a.id===this.selectedAgent))this.selectedAgent=null;
     $('start-overlay').classList.toggle('hidden',state.phase!=='ready');$('pause-overlay').classList.toggle('hidden',state.phase!=='paused');
@@ -73,12 +76,20 @@ export class Interface {
       this.message(`${AGENTS[this.awaitingEnergyCard].name} è di nuovo disponibile. Seleziona la carta per inviarla.`);this.awaitingEnergyCard=null;
     }
     const result=state.result||calculateResults(state);
+    $('live-repaired').textContent=result.repaired;
+    $('live-repaired-label').textContent=result.repaired===1?'ricucita':'ricucite';
+    const activeCount=state.fractures.filter(f=>f.status==='active').length;
+    $('live-active').textContent=activeCount;
+    $('live-active-label').textContent=activeCount===1?'frattura':'fratture';
+    $('live-work').textContent=`${Math.floor(result.workPercent)}%`;
+    $('live-work-fill').style.width=`${result.workPercent}%`;
+    $('energy-track').style.setProperty('--segments',state.config.energy.max);
     $('repaired-count').textContent=result.repaired;$('partial-count').textContent=result.partial;$('unresolved-count').textContent=result.unresolved;
     $('work-value').textContent=`${energyLabel(result.workPercent)}%`;$('work-fill').style.width=`${result.workPercent}%`;
     $('goal-label').textContent=`Obiettivo: almeno ${state.config.recognitionPercent}% di lavoro sulle fratture generate.`;
     const signature=JSON.stringify([state.hand,playing]);
     if(signature!==this.handSignature){
-      this.handSignature=signature;$('hand').innerHTML=state.hand.map((id,i)=>{const a=AGENTS[id];return `<button class="agent-card${this.selectedCard===id?' selected':''}${!canAfford(state,id)?' low-energy':''}" data-card="${id}" aria-pressed="${this.selectedCard===id}" aria-label="${i+1}: ${a.name}, costo ${a.cost} energia. ${a.description}" style="--agent-color:${a.color}" ${playing?'':'disabled'}><span class="card-icon">${icon(a.icon)}<span class="cost" aria-hidden="true">ϟ ${a.cost}</span></span><b>${a.name}</b><small><span>100 capacità</span><span>${i+1}</span></small><span class="card-availability"></span></button>`;}).join('');
+      this.handSignature=signature;$('hand').innerHTML=state.hand.map((id,i)=>{const a=AGENTS[id];return `<button class="agent-card${this.selectedCard===id?' selected':''}${!canAfford(state,id)?' low-energy':''}" data-card="${id}" aria-pressed="${this.selectedCard===id}" aria-label="${i+1}: ${a.name}, costo ${a.cost} energia. ${a.description}" style="--agent-color:${ART_COLORS[a.id]}" ${playing?'':'disabled'}>${portrait(id)}<span class="card-icon"><span class="cost" aria-hidden="true">ϟ ${a.cost}</span><span class="card-role-icon">${icon(a.icon)}</span></span><b>${a.name}</b><small><span>100 capacità</span><span>${i+1}</span></small><span class="card-availability"></span></button>`;}).join('');
     }
     for(const button of $('hand').querySelectorAll('[data-card]')) {
       const id=button.dataset.card, selected=this.selectedCard===id, available=canAfford(state,id);
@@ -122,7 +133,7 @@ export class Interface {
     $('agent-list').querySelector('.empty-state')?.remove();
     for(const a of state.agents){
       const def=AGENTS[a.type];let row=this.agentRows.get(a.id);
-      if(!row){row=document.createElement('button');row.className='active-agent';row.dataset.agent=a.id;row.style.setProperty('--agent-color',def.color);row.innerHTML=`${icon(def.icon)}<span><b>#${a.id} ${def.name}</b><small></small></span><strong></strong>`;$('agent-list').append(row);this.agentRows.set(a.id,row);}
+      if(!row){row=document.createElement('button');row.className='active-agent';row.dataset.agent=a.id;row.style.setProperty('--agent-color',def.color);row.innerHTML=`${portrait(a.type)}<span><b>#${a.id} ${def.name}</b><small></small></span><strong></strong>`;$('agent-list').append(row);this.agentRows.set(a.id,row);}
       row.disabled=state.phase!=='playing';row.classList.toggle('selected',this.selectedAgent===a.id);row.setAttribute('aria-pressed',this.selectedAgent===a.id);
       const target=state.fractures.find(f=>f.id===a.targetId);row.querySelector('small').textContent=target?`${a.working>0?'Interviene':'Verso'} #${target.id} ${CONFLICTS[target.type].name}`:'In attesa di nuove fratture';row.querySelector('strong').innerHTML=`${a.capacity}<small>/100</small>`;
       row.setAttribute('aria-label',`Seleziona agente ${a.id}, ${def.name}, capacità residua ${a.capacity} su 100`);
@@ -136,6 +147,7 @@ export class Interface {
     const unlock=r.passed?(next?`Hai sbloccato ${next.name}.`:'Hai completato il percorso disponibile. Il percorso sarà ampliato con nuove formazioni.'):r.outcome==='good'?'Hai raggiunto almeno il 60%; per sbloccare la formazione successiva serve l’80%.':'Per ottenere il riconoscimento serve almeno l’80% del lavoro.';
     const newCards=next?.agents.filter(id=>!current.agents.includes(id)).map(id=>AGENTS[id].name) ?? [];
     const resources=r.passed&&next?`<div class="next-resources"><b>${next.name} · nuove risorse</b><p>Energia massima ${next.energyMax} · ricarica 1 ogni ${String(next.secondsPerPoint).replace('.',',')} secondi.</p><p>Nuove carte: ${newCards.length?newCards.join(', '):'nessuna'}. Carte disponibili: ${next.agents.map(id=>AGENTS[id].name).join(', ')}.</p></div>`:'';
+    $('result-work-title').textContent=r.passed?'Il quartiere rinasce.':'Ogni legame conta.';
     $('result-content').innerHTML=`<div class="result-kicker">${r.passed?'<span class="medal-result">🏅</span>':''}<b>${title}</b> · ${unlock}</div><div class="result-numbers"><div><strong style="color:var(--gold)">${r.repaired}</strong><span>Ricucite al 100%</span></div><div><strong style="color:var(--red)">${r.partial}</strong><span>Parzialmente ricucite</span></div><div><strong>${r.unresolved}</strong><span>Irrisolte · nessun intervento</span></div></div><div class="result-work"><strong>${energyLabel(r.workPercent)}%</strong><span>del lavoro riparativo realizzato</span></div>${resources}${r.consequenceStats?`<div class="next-resources"><b>Conseguenze nella comunità</b><p>Fratture secondarie generate: ${r.consequenceStats.secondary} · propagazioni impedite: ${r.consequenceStats.prevented} · conseguenze ancora attive: ${r.consequenceStats.active}.</p></div>`:''}<p>${r.partialExpired?`${r.partialExpired} fratture parziali non sono state completate in tempo. `:''}Il risultato comprende tutte le ${r.total} fratture generate, anche quelle scadute. Eventi programmati: ${r.spawnStats.scheduled}; generati: ${r.spawnStats.generated}; non generati per limite di fratture attive: ${r.spawnStats.skippedCapacity}; non generati per assenza di strade disponibili: ${r.spawnStats.skippedNoRoute}. Gli eventi non generati non vengono rinviati. Il riconoscimento è interno al gioco, non una qualifica professionale.</p><div class="result-list">${r.fractures.map(f=>`<div><span>#${f.id} ${CONFLICTS[f.type].name}</span><span>${Math.floor(f.progress/f.required*100)}% (${f.progress}/${f.required}) <small>· ${f.status==='repaired'?'ricucita':f.expired?'tempo scaduto':'fine partita'}</small></span></div>`).join('')}</div>`;
     $('next-level-button').classList.toggle('hidden',!r.passed||!next);$('next-level-button').textContent=next?`INIZIA ${next.name}`:'';if(!$('result-dialog').open)$('result-dialog').showModal();
   }

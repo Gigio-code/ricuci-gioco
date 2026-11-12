@@ -5,101 +5,83 @@ import { AGENTS } from '../catalog/agents.js';
 import { CONFLICTS } from '../catalog/conflicts.js';
 import { layoutLabels } from './label-layout.js';
 import { FRACTURE_STYLES } from './fracture-styles.js';
-const NS = 'http://www.w3.org/2000/svg';
-function element(markup) { const group = document.createElementNS(NS, 'g'); group.innerHTML = markup; return group; }
-const point = (r, angle) => [360 + r * Math.cos(angle), 360 + r * Math.sin(angle)];
-export class ArenaRenderer {
-  constructor(svg, map) {
-    this.svg = svg; this.fractureElements = new Map(); this.agentElements = new Map();
-    let parcels = '', details = '';
-    const palette = ['#d5dfc8', '#cedbbf', '#dde4cf', '#c6d5b8', '#d9e0c7', '#d4ddc0'];
-    // Quartieri tra le strade: geometria decorativa indipendente dalla rete di navigazione.
-    for (let ring = 0; ring < 3; ring++) for (let sector = 0; sector < 12; sector++) {
-      const outer = [272, 216, 145][ring], inner = [227, 157, 84][ring];
-      const a = sector * Math.PI / 6 - Math.PI / 2 + .038, b = a + Math.PI / 6 - .076;
-      const corners = [point(outer,a), point(outer,b), point(inner,b), point(inner,a)];
-      parcels += `<path d="M${corners.map(p=>p.join(',')).join('L')}Z" fill="${palette[(ring * 3 + sector) % palette.length]}" stroke="#e6ecdd" stroke-width="5" stroke-linejoin="round"/>`;
-      const c = point((outer + inner) / 2, (a+b)/2), angle = (a+b)/2*180/Math.PI+90;
-      if (sector % 3 !== 1) {
-        details += `<g transform="translate(${c}) rotate(${angle})" opacity=".75"><rect x="-13" y="-7" width="10" height="15" rx="2" fill="#efe9d5" stroke="#bec7ab" stroke-width="1"/><rect x="1" y="-10" width="11" height="20" rx="2" fill="#e8e3ce" stroke="#b8c3a5" stroke-width="1"/><path d="M-10-2h4M4-5h5M4 0h5" stroke="#c1c3a7" stroke-width="1.5"/></g>`;
-      } else {
-        for(let t=0;t<4;t++) details+=`<circle cx="${c[0]+Math.cos(t*2.4)*11}" cy="${c[1]+Math.sin(t*2.4)*9}" r="${4+t%2}" fill="#91a67c" opacity=".65"/>`;
-      }
-    }
-    const roads = map.edges.map(e => {const a=nodeAt(map,e.a),b=nodeAt(map,e.b);return `<path d="M${a.x} ${a.y}L${b.x} ${b.y}"/>`;}).join('');
-    const gateMarkup = map.gates.map(g => {
-      const n=nodeAt(map,g.id), dx=(n.x-360)/278,dy=(n.y-360)/278;
-      return `<g class="map-gate" data-gate="${g.id}" role="button" tabindex="0" aria-label="Invia un agente" transform="translate(${360+dx*311} ${360+dy*311})"><title>Ingresso ${g.direction}</title><circle class="gate-confirm" r="28" fill="none" stroke="#b88b36" stroke-width="4" visibility="hidden"/><circle class="gate-marker" r="21" fill="#f5f4e9" stroke="#758e70" stroke-width="2"/><text text-anchor="middle" y="4" font-size="12" fill="#617654">${g.symbol}</text><circle class="gate-hit" r="48" fill="transparent" pointer-events="all"/></g>`;
-    }).join('');
-    this.svg.innerHTML = `<defs><radialGradient id="land"><stop stop-color="#e8eddb"/><stop offset="1" stop-color="#dce5ce"/></radialGradient><filter id="map-shadow" x="-.2" y="-.2" width="1.4" height="1.4"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#718364" flood-opacity=".12"/></filter><filter id="route-glow"><feGaussianBlur stdDeviation="2"/></filter></defs><circle cx="360" cy="360" r="291" fill="url(#land)" stroke="#bacbae" stroke-width="1" filter="url(#map-shadow)"/><circle cx="360" cy="360" r="298" fill="none" stroke="#c8d3bb" stroke-dasharray="1 7"/><g>${parcels}</g><g>${details}</g><g fill="none" stroke="#c4c9ad" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">${roads}</g><g fill="none" stroke="#f6f1dd" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">${roads}</g><g>${map.nodes.filter(n=>n.ring!==0).map(n=>`<circle cx="${n.x}" cy="${n.y}" r="4" fill="#faf5e5"/>`).join('')}</g><circle cx="360" cy="360" r="24" fill="#e4d9b6" stroke="#d2c69e"/><circle cx="360" cy="360" r="16" fill="none" stroke="#f4efdb" stroke-width="2"/><path d="M354 360h12m-6-6v12" stroke="#b8ae82" stroke-width="2"/><text x="360" y="405" text-anchor="middle" font-size="8" letter-spacing="2" fill="#8a9475">PIAZZA</text><g opacity=".6" font-size="7" letter-spacing="1.5" fill="#7b8c68"><text x="177" y="191">GLI ORTI</text><text x="480" y="221">IL BORGO</text><text x="478" y="513">LE CORTI</text><text x="156" y="510">I GIARDINI</text></g><g id="route-layer"></g><g id="effect-layer"></g><g id="fracture-layer"></g><g id="agent-layer"></g><g id="gate-layer">${gateMarkup}</g>`;
-    this.gateElements = [...this.svg.querySelectorAll('[data-gate]')];
-    this.gateElements.forEach(el => { const gate=map.gates.find(g=>g.id===el.dataset.gate); el.setAttribute('aria-label',`Ingresso ${gate.direction}: invia l’agente selezionato`); });
-    this.effectLayer=this.svg.querySelector('#effect-layer');this.fractureLayer=this.svg.querySelector('#fracture-layer');this.agentLayer=this.svg.querySelector('#agent-layer');this.routeLayer=this.svg.querySelector('#route-layer');
+import { sprite, ART_COLORS } from '../ui/art.js';
+const NS='http://www.w3.org/2000/svg';
+const element=markup=>{const g=document.createElementNS(NS,'g');g.innerHTML=markup;return g;};
+const artURL=new URL('../../assets/neighborhood.webp',import.meta.url).href;
+function stitches(points,percent){
+  const segments=points.slice(1).map((p,i)=>({a:points[i],b:p,length:Math.hypot(p[0]-points[i][0],p[1]-points[i][1])}));
+  const total=segments.reduce((s,e)=>s+e.length,0);let d='';
+  for(const t of [.09,.26,.43,.60,.77,.94]){
+    if(t*100>percent)continue;let distance=t*total;
+    for(const e of segments){if(distance>e.length){distance-=e.length;continue;}const f=distance/e.length,x=e.a[0]+(e.b[0]-e.a[0])*f,y=e.a[1]+(e.b[1]-e.a[1])*f,nx=-(e.b[1]-e.a[1])/e.length*6,ny=(e.b[0]-e.a[0])/e.length*6;d+=`M${x-nx},${y-ny}L${x+nx},${y+ny}`;break;}
   }
-  render(state, { selectedAgent = null, focusedFracture = null, selectedCard = null, gateFeedback = null } = {}) {
-    for(const gate of this.gateElements) { gate.querySelector('.gate-marker').setAttribute('fill',selectedCard?'#f9e2a0':'#f5f4e9'); gate.querySelector('.gate-confirm').setAttribute('visibility',gateFeedback?.id===gate.dataset.gate && gateFeedback.until>performance.now()?'visible':'hidden'); gate.classList.toggle('ready',!!selectedCard); }
-    this.effectLayer.innerHTML=state.fractures.filter(f=>f.status==='active'&&f.effectEdge).map(f=>{const e=edgeAt(state.map,f.effectEdge),a=nodeAt(state.map,e.a),b=nodeAt(state.map,e.b);return `<path d="M${a.x} ${a.y}L${b.x} ${b.y}" stroke="#9e3e36" stroke-width="9" stroke-dasharray="7 5" opacity=".9"><title>Isolamento: strada chiusa da Esclusione #${f.id}</title></path>`;}).join('') + state.fractures.filter(f=>isConsequenceActive(state,f)&&['diffidenza','promessa','manipolazione'].includes(f.type)).map(f=>{const e=edgeAt(state.map,f.edgeId),a=nodeAt(state.map,e.a),b=nodeAt(state.map,e.b),radius=CONSEQUENCES[f.type].radius;return `<circle cx="${(a.x+b.x)/2}" cy="${(a.y+b.y)/2}" r="${radius}" fill="#b94a3c" fill-opacity=".035" stroke="#a14b3e" stroke-opacity=".65" stroke-width="2" stroke-dasharray="6 6" pointer-events="none"><title>${effectDescription(state,f)}</title></circle>`;}).join('');
-    for(const f of state.fractures) {
-      const percent=Math.min(100,Math.round(f.progress/f.required*100));
-      let el=this.fractureElements.get(f.id);
+  return d;
+}
+export class ArenaRenderer {
+  constructor(svg,map){
+    this.svg=svg;this.fractureElements=new Map();this.agentElements=new Map();this.lastLayout=-1;this.layoutSignature='';this.repairUntil=-1;this.repairedCount=0;
+    const roads=map.edges.map(e=>{const a=nodeAt(map,e.a),b=nodeAt(map,e.b);return `<path d="M${a.x} ${a.y}L${b.x} ${b.y}"/>`;}).join('');
+    const gates=map.gates.map(g=>{const n=nodeAt(map,g.id),dx=(n.x-360)/278,dy=(n.y-360)/278,x=360+dx*310,y=360+dy*310;
+      return `<g class="map-gate" data-gate="${g.id}" role="button" tabindex="0" aria-label="Ingresso ${g.direction}: invia l’agente selezionato" transform="translate(${x} ${y})"><title>Ingresso ${g.direction}</title><circle class="gate-confirm" r="29" fill="none" stroke="#ffdb80" stroke-width="4" visibility="hidden"/><path class="gate-marker" d="M0-24C14-24 24-15 24-3S12 18 0 28C-12 18-24 9-24-3S-14-24 0-24Z" fill="#193e52" stroke="#b5e4df" stroke-width="2.5"/><text y="4" text-anchor="middle" font-size="23" font-weight="900" fill="#ffefce">${g.symbol}</text><circle r="40" fill="transparent" pointer-events="all"/></g>`;
+    }).join('');
+    svg.innerHTML=`<defs><clipPath id="actor-crop"><rect x="-27" y="-59" width="54" height="72"/></clipPath><mask id="road-mask"><rect width="720" height="720" fill="white"/><circle cx="360" cy="360" r="24" fill="black"/></mask><clipPath id="arena-crop"><rect x="24" y="24" width="672" height="672" rx="38"/></clipPath><filter id="piece-shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#071a2d" flood-opacity=".65"/></filter><filter id="gold-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter><filter id="route-glow"><feGaussianBlur stdDeviation="2"/></filter></defs><g clip-path="url(#arena-crop)" pointer-events="none"><rect x="24" y="24" width="672" height="672" fill="#14233a"/><image href="${artURL}" x="42" y="52" width="636" height="636"/><g mask="url(#road-mask)" class="road-shadow" fill="none" stroke="#684c38" stroke-opacity=".28" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">${roads}</g><g mask="url(#road-mask)" fill="none" stroke="#e7cba1" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">${roads}</g><g mask="url(#road-mask)" fill="none" stroke="#fff0d3" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">${roads}</g><g fill="#f8edd5" stroke="#ceb78b" stroke-width="1">${map.nodes.filter(n=>n.ring!==0).map(n=>`<circle cx="${n.x}" cy="${n.y}" r="4.5"/>`).join('')}</g><text class="map-note" x="360" y="401" text-anchor="middle" fill="#283e4d" paint-order="stroke" stroke="#f8e9c7" stroke-width="3" stroke-linejoin="round">LA PIAZZA</text></g><g id="route-layer" pointer-events="none"></g><g id="effect-layer" pointer-events="none"></g><g id="fracture-layer"></g><g id="agent-layer"></g><g id="label-layer"></g><g id="gate-layer">${gates}</g>`;
+    this.gateElements=[...svg.querySelectorAll('[data-gate]')];
+    for(const id of ['effect','fracture','agent','route','label'])this[`${id}Layer`]=svg.querySelector(`#${id}-layer`);
+    const toast=document.getElementById('repair-toast');if(toast)toast.hidden=true;
+  }
+  render(state,{selectedAgent=null,focusedFracture=null,selectedCard=null,gateFeedback=null}={}){
+    for(const gate of this.gateElements){gate.classList.toggle('ready',!!selectedCard);gate.querySelector('.gate-confirm').setAttribute('visibility',gateFeedback?.id===gate.dataset.gate&&gateFeedback.until>performance.now()?'visible':'hidden');}
+    const effects=state.fractures.filter(f=>isConsequenceActive(state,f));
+    const effectSignature=effects.map(f=>`${f.id}:${f.effectEdge??''}`).join('|');
+    if(effectSignature!==this.effectSignature){this.effectSignature=effectSignature;this.effectLayer.innerHTML=effects.map(f=>{
+      if(f.effectEdge){const e=edgeAt(state.map,f.effectEdge),a=nodeAt(state.map,e.a),b=nodeAt(state.map,e.b);return `<path d="M${a.x} ${a.y}L${b.x} ${b.y}" stroke="#e65465" stroke-width="11" stroke-dasharray="7 5"><title>Isolamento: strada chiusa da Esclusione #${f.id}</title></path>`;}
+      if(['diffidenza','promessa','manipolazione'].includes(f.type)){const e=edgeAt(state.map,f.edgeId),a=nodeAt(state.map,e.a),b=nodeAt(state.map,e.b);return `<circle cx="${(a.x+b.x)/2}" cy="${(a.y+b.y)/2}" r="${CONSEQUENCES[f.type].radius}" fill="#ed6463" fill-opacity=".06" stroke="#f79b7d" stroke-opacity=".85" stroke-width="2" stroke-dasharray="6 6"><title>${effectDescription(state,f)}</title></circle>`;}return '';
+    }).join('');}
+    for(const f of state.fractures){
+      const percent=Math.min(100,f.progress/f.required*100),repaired=f.status==='repaired',active=f.status==='active';
       const edge=edgeAt(state.map,f.edgeId),a=nodeAt(state.map,edge.a),b=nodeAt(state.map,edge.b),x=(a.x+b.x)/2,y=(a.y+b.y)/2;
-      if(!el) {
-        const angle=Math.atan2(b.y-a.y,b.x-a.x)+Math.PI/2;
-        const style=FRACTURE_STYLES[f.type];
-        const p=style.points.map(([u,v])=>[u*Math.cos(angle)-v*Math.sin(angle),u*Math.sin(angle)+v*Math.cos(angle)]);
-        const d='M'+p.map(t=>t.join(',')).join('L');
+      let entry=this.fractureElements.get(f.id);
+      if(!entry){
+        const style=FRACTURE_STYLES[f.type],angle=Math.atan2(b.y-a.y,b.x-a.x)+Math.PI/2;
+        const points=style.points.map(([u,v])=>[u*Math.cos(angle)-v*Math.sin(angle),u*Math.sin(angle)+v*Math.cos(angle)]),d='M'+points.map(p=>p.join(',')).join('L');
         const dx=(b.x-a.x)/edge.length*10,dy=(b.y-a.y)/edge.length*10;
-        el=element(`<title>${CONFLICTS[f.type].name}: ${CONFLICTS[f.type].description}</title><circle class="fracture-hit" r="26" fill="transparent"/><path d="M${-dx} ${-dy}L${dx} ${dy}" stroke="#d6dfc8" stroke-width="14"/><path d="${d}" class="crack-base" fill="none" stroke="#9a3c34" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path class="crack-branches" d="${style.branch}" transform="rotate(${angle*180/Math.PI})" fill="none" stroke="#b94a3c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path class="crack-red" d="${d}" fill="none" stroke="#c85a4a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path class="crack-gold" d="${d}" fill="none" stroke="#d4ac52" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" pathLength="100"/><line class="marker-line" x1="0" y1="0" x2="0" y2="0" stroke="#a86952" stroke-width="1.5" stroke-dasharray="3 3" pointer-events="none"/><circle class="fracture-badge" cx="20" cy="-18" r="9" fill="#fbf3df" stroke="#b66b52"/><circle class="effect-mark" cx="-20" cy="-20" r="10" fill="#7d322c" stroke="#fff8e7" stroke-width="2"/><text class="effect-mark" x="-20" y="-16" text-anchor="middle" font-size="13" font-weight="bold" fill="white">!</text><text class="fracture-id" x="20" y="-15" text-anchor="middle" font-size="8" fill="#995442">${f.id}</text><g class="marker-label"><circle class="type-badge" cx="0" cy="0" r="30" fill="#b94a3c" stroke="#fff8e7" stroke-width="2"/><svg class="type-symbol" x="-20" y="-20" width="40" height="40" viewBox="0 0 32 32" fill="none" stroke="#fff8e7" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${style.icon}</svg><text class="fracture-name" y="49" text-anchor="middle" font-size="20" font-weight="700" fill="#752f27" paint-order="stroke" stroke="#f9f7eb" stroke-width="5" stroke-linejoin="round" pointer-events="none">${CONFLICTS[f.type].name}</text></g><text class="fracture-percent" y="29" text-anchor="middle" font-size="8" fill="#925b3a" paint-order="stroke" stroke="#eef0de" stroke-width="3"></text>`);
-        el.setAttribute('class','map-fracture');el.dataset.fracture=f.id;el.setAttribute('transform',`translate(${x} ${y})`);
-        this.fractureLayer.append(el);this.fractureElements.set(f.id,el);
+        const el=element(`<title></title><circle class="fracture-hit" r="38" fill="transparent" pointer-events="all"/><path class="road-cut" d="M${-dx} ${-dy}L${dx} ${dy}" stroke="#26392f" stroke-width="16"/><path class="crack-base" d="${d}" fill="none" stroke="#59293c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path class="crack-branches" d="${style.branch}" transform="rotate(${angle*180/Math.PI})" fill="none" stroke="#e85460" stroke-width="3" stroke-linecap="round"/><path class="crack-red" d="${d}" fill="none" stroke="#ff7d79" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path class="crack-glow" d="${d}" fill="none" stroke="#ffd65d" stroke-width="10" pathLength="100" filter="url(#gold-glow)"/><path class="crack-gold" d="${d}" fill="none" stroke="#ffd26d" stroke-width="5" stroke-linecap="round" pathLength="100"/><path class="stitch-shadow" fill="none" stroke="#78542c" stroke-width="5.5" stroke-linecap="round"/><path class="stitches" fill="none" stroke="#ffe6a4" stroke-width="3" stroke-linecap="round"/>`);
+        el.setAttribute('class','map-fracture fracture-alert');el.dataset.fracture=f.id;el.setAttribute('transform',`translate(${x} ${y})`);this.fractureLayer.append(el);
+        const label=element(`<title></title><path class="marker-line" d="" fill="none" stroke="#632f3a" stroke-width="2.5" stroke-dasharray="3 4"/><g class="marker-label"><rect class="label-panel" x="-75" y="-23" width="150" height="46" rx="9" fill="#a53e50" stroke="#ffe0cc" stroke-width="1.8"/><svg class="type-symbol" x="-68" y="-15" width="25" height="25" viewBox="0 0 32 32" fill="none" stroke="#fff1d8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${style.icon}</svg><text class="fracture-name" y="-2" font-size="17" font-weight="800" fill="#fff3db">${CONFLICTS[f.type].name}</text><text class="fracture-deadline" y="13" font-size="13" fill="#ffdfc3"></text><rect class="fracture-track" y="18" height="4" rx="2" fill="#6d283b"/><rect class="fracture-work" y="18" height="4" rx="2" fill="#ffdb80"/></g>`);
+        label.setAttribute('class','map-fracture');label.dataset.fracture=f.id;label.setAttribute('role','button');label.setAttribute('tabindex','0');this.labelLayer.append(label);
+        entry={el,label,points,status:f.status,percent:-1,visual:''};this.fractureElements.set(f.id,entry);
       }
-      const repaired=f.status==='repaired',active=f.status==='active';
-      el.querySelectorAll('.effect-mark').forEach(mark=>mark.setAttribute('visibility',isConsequenceActive(state,f)?'visible':'hidden'));
-      el.setAttribute('aria-label',`Frattura ${f.id}, ${CONFLICTS[f.type].name}, ${percent}%, ${repaired?'ricucita':active?`${Math.ceil(f.expiresAt-state.time)} secondi rimasti`:'tempo scaduto'}. ${active?effectDescription(state,f):''}`);
-      el.setAttribute('role',active?'button':'img');el.setAttribute('tabindex',active?'0':'-1');
-      el.querySelector('.crack-gold').setAttribute('stroke-dasharray',`${percent} ${100-percent}`);
-      el.querySelector('.crack-gold').setAttribute('opacity',f.progress?1:0);
-      el.querySelector('.crack-base').setAttribute('stroke',repaired?'#a17c32':'#9a3c34');
-      el.querySelector('.fracture-hit').setAttribute('stroke',focusedFracture===f.id?'#b58e3a':'transparent');
-      el.querySelector('.type-badge').setAttribute('fill',repaired?'#a17c32':'#b94a3c');
-      el.querySelector('.crack-branches').setAttribute('stroke',repaired?'#c49b43':'#b94a3c');
-      el.querySelector('.fracture-badge').setAttribute('fill',repaired?'#d7b45d':active?'#fff3dc':'#d6d5c3');
-      el.querySelector('.fracture-id').setAttribute('fill',repaired?'#655025':'#995442');
-      el.querySelector('.fracture-name').setAttribute('fill',repaired?'#846524':'#752f27');
-      el.querySelector('.fracture-percent').textContent=active?`${percent}%`:'';
-      el.querySelector('.marker-label').setAttribute('visibility',active?'visible':'hidden');el.querySelector('.marker-line').setAttribute('visibility',active?'visible':'hidden');
-      el.setAttribute('opacity',active||repaired?1:.6);
+      const {el,label}=entry;
+      const description=`Frattura ${f.id}, ${CONFLICTS[f.type].name}, ${Math.floor(percent)}%, ${repaired?'ricucita':active?`${Math.ceil(f.expiresAt-state.time)} secondi rimasti`:'tempo scaduto'}. ${active?effectDescription(state,f):''}`;
+      el.setAttribute('aria-label',description);el.querySelector('title').textContent=description;el.setAttribute('role','button');el.setAttribute('tabindex','0');label.setAttribute('aria-label',description);label.querySelector('title').textContent=description;
+      label.setAttribute('display',active?'inline':'none');label.setAttribute('tabindex',active?'0':'-1');
+      if(entry.percent!==percent){entry.percent=percent;for(const cls of ['.crack-gold','.crack-glow']){el.querySelector(cls).setAttribute('stroke-dasharray',`${percent} ${100-percent}`);el.querySelector(cls).setAttribute('opacity',percent>0?'1':'0');}const d=stitches(entry.points,percent);el.querySelector('.stitches').setAttribute('d',d);el.querySelector('.stitch-shadow').setAttribute('d',d);}
+      const visual=`${f.status}:${focusedFracture===f.id}:${isConsequenceActive(state,f)}`;
+      if(entry.visual!==visual){entry.visual=visual;el.querySelector('.crack-base').setAttribute('stroke',repaired?'#956733':'#59293c');el.querySelector('.crack-red').setAttribute('opacity',repaired?'0':'1');el.querySelector('.crack-branches').setAttribute('opacity',repaired?'0':'1');el.querySelector('.fracture-hit').setAttribute('stroke',focusedFracture===f.id?'#ffe8ad':'transparent');el.querySelector('.fracture-hit').setAttribute('stroke-width','2');el.setAttribute('opacity',active||repaired?'1':'.55');label.querySelector('.label-panel').setAttribute('fill',isConsequenceActive(state,f)?'#8d3452':'#a53e50');label.querySelector('.label-panel').setAttribute('stroke',focusedFracture===f.id?'#8cf0cf':'#ffdfcc');label.querySelector('.label-panel').setAttribute('stroke-width',focusedFracture===f.id?'3':'1.8');}
+      if(entry.status!=='repaired'&&repaired){el.classList.add('new-repair');this.repairUntil=state.time+2.3;this.repairedCount++;const toast=document.getElementById('repair-toast');if(toast){toast.hidden=false;toast.style.animation='none';void toast.offsetWidth;toast.style.animation='';}}
+      entry.status=f.status;
+      if(active){label.querySelector('.fracture-deadline').textContent=`${Math.floor(percent)}% · ${Math.max(0,Math.ceil(f.expiresAt-state.time))}s`;label.querySelector('.fracture-work').setAttribute('width',Math.max(0,(entry.width??150)-49)*percent/100);}
     }
-    const activeLabels=state.fractures.filter(f=>f.status==='active').map(f=>{
-      const e=edgeAt(state.map,f.edgeId),a=nodeAt(state.map,e.a),b=nodeAt(state.map,e.b);
-      return {id:f.id,name:CONFLICTS[f.type].name,x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-    });
-    const box=(x,y,r)=>({left:x-r,right:x+r,top:y-r,bottom:y+r});
-    const blockers=[...activeLabels.map(f=>box(f.x,f.y,23)),...state.agents.map(a=>box(a.x,a.y,30)),...state.map.gates.map(g=>{const n=nodeAt(state.map,g.id),dx=(n.x-360)/278,dy=(n.y-360)/278;return box(360+dx*311,360+dy*311,50);})];
-    const labels=layoutLabels(activeLabels,blockers);
-    for(const f of activeLabels){const label=labels.get(f.id),el=this.fractureElements.get(f.id),dx=label.x-f.x,dy=label.y-f.y;el.querySelector('.marker-label').setAttribute('transform',`translate(${dx} ${dy})`);el.querySelector('.marker-line').setAttribute('x2',dx);el.querySelector('.marker-line').setAttribute('y2',dy);}
-    for(const [id,el] of this.agentElements) if(!state.agents.some(a=>a.id===id)){el.remove();this.agentElements.delete(id);}
+    const toast=document.getElementById('repair-toast');if(toast&&state.time>this.repairUntil)toast.hidden=true;
+    const activeLabels=state.fractures.filter(f=>f.status==='active').map(f=>{const e=edgeAt(state.map,f.edgeId),a=nodeAt(state.map,e.a),b=nodeAt(state.map,e.b);return {id:f.id,name:CONFLICTS[f.type].name,x:(a.x+b.x)/2,y:(a.y+b.y)/2};});
+    const signature=activeLabels.map(f=>f.id).join(',');
+    if(signature!==this.layoutSignature||state.time-this.lastLayout>.6){
+      this.layoutSignature=signature;this.lastLayout=state.time;
+      const box=(x,y,r)=>({left:x-r,right:x+r,top:y-r,bottom:y+r});
+      const blockers=[...activeLabels.map(f=>box(f.x,f.y,22)),...state.agents.map(a=>box(a.x,a.y-15,22)),...state.map.gates.map(g=>{const n=nodeAt(state.map,g.id);return box(360+(n.x-360)/278*310,360+(n.y-360)/278*310,36);})];
+      const labels=layoutLabels(activeLabels,blockers);
+      for(const f of activeLabels){const layout=labels.get(f.id),entry=this.fractureElements.get(f.id),{label}=entry,w=layout.width;entry.width=w;label.querySelector('.marker-line').setAttribute('d',`M${f.x},${f.y}L${layout.x},${layout.y}`);label.querySelector('.marker-label').setAttribute('transform',`translate(${layout.x} ${layout.y})`);label.querySelector('.label-panel').setAttribute('x',-w/2);label.querySelector('.label-panel').setAttribute('width',w);label.querySelector('.type-symbol').setAttribute('x',-w/2+7);label.querySelector('.fracture-name').setAttribute('x',-w/2+39);label.querySelector('.fracture-deadline').setAttribute('x',-w/2+39);for(const cls of ['.fracture-track','.fracture-work'])label.querySelector(cls).setAttribute('x',-w/2+39);label.querySelector('.fracture-track').setAttribute('width',w-49);}
+    }
+    for(const [id,el] of this.agentElements)if(!state.agents.some(a=>a.id===id)){el.remove();this.agentElements.delete(id);}
     for(const a of state.agents){
-      let el=this.agentElements.get(a.id);const def=AGENTS[a.type];
-      if(!el){
-        el=element(`<circle class="working-halo" r="23" fill="${def.color}"/><circle class="agent-selection" r="21" fill="none" stroke="#fff8ce" stroke-width="2"/><ellipse cx="0" cy="14" rx="12" ry="4" fill="#506943" opacity=".2"/><rect class="agent-body" x="-10" y="-3" width="20" height="20" rx="8" fill="${def.color}" stroke="#f9f6e8" stroke-width="1.5"/><circle cy="-7" r="6" fill="#eee5cd" stroke="${def.color}" stroke-width="2"/><text y="11" text-anchor="middle" font-size="9" font-weight="600" fill="#fff7df">${def.short}</text><path class="capacity-arc" d="M-14-12A19 19 0 1 1-15 11" fill="none" stroke="${def.color}" stroke-width="2" pathLength="100"/><text class="contribution-label" y="-30" text-anchor="middle" font-size="11" font-weight="600" fill="${def.color}" paint-order="stroke" stroke="#f8f6e5" stroke-width="3"></text>`);
-        el.setAttribute('class','map-agent');el.dataset.agent=a.id;el.setAttribute('role','button');el.setAttribute('tabindex','0');this.agentLayer.append(el);this.agentElements.set(a.id,el);
-      }
-      const offset=(a.id%3-1)*5;
-      el.setAttribute('transform',`translate(${a.x+offset} ${a.y+offset})`);
-      el.setAttribute('aria-label',`${def.name}, agente ${a.id}, capacità ${a.capacity}: seleziona per cambiare meta`);
-      el.querySelector('.working-halo').setAttribute('display',a.working>0?'block':'none');
-      el.querySelector('.agent-selection').setAttribute('display',selectedAgent===a.id?'block':'none');
-      el.querySelector('.capacity-arc').setAttribute('stroke-dasharray',`${a.capacity} ${100-a.capacity}`);
-      el.querySelector('.contribution-label').textContent=a.lastContribution?.until>state.time?`+${a.lastContribution.amount}`:'';
+      let el=this.agentElements.get(a.id);const def=AGENTS[a.type],color=ART_COLORS[a.type];
+      if(!el){el=element(`<title></title><circle class="working-halo" cy="-8" r="28" fill="${color}"/><ellipse class="actor-base" cx="0" cy="5" rx="16" ry="9" fill="#203c4b" stroke="${color}" stroke-width="2"/><ellipse class="agent-selection" cx="0" cy="5" rx="22" ry="13" fill="none" stroke="#ffe7a1" stroke-width="3"/><g class="actor-figure">${sprite(a.type)}</g><circle class="actor-hit" cy="-17" r="38" fill="transparent" pointer-events="all"/><path class="capacity-arc" d="M-16 12H16" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" pathLength="100"/><text class="contribution-label" y="-48" text-anchor="middle" font-size="17" font-weight="900" fill="#fff0b8" paint-order="stroke" stroke="#243a45" stroke-width="3"></text>`);el.setAttribute('class','map-agent');el.dataset.agent=a.id;el.setAttribute('role','button');el.setAttribute('tabindex','0');this.agentLayer.append(el);this.agentElements.set(a.id,el);}
+      const offset=(a.id%3-1)*3;el.setAttribute('transform',`translate(${a.x+offset} ${a.y+offset})`);
+      const description=`${def.name}, agente ${a.id}, capacità ${a.capacity}: seleziona per cambiare meta`;el.setAttribute('aria-label',description);el.querySelector('title').textContent=description;
+      el.querySelector('.working-halo').setAttribute('display',a.working>0?'inline':'none');el.querySelector('.agent-selection').setAttribute('display',selectedAgent===a.id?'inline':'none');el.querySelector('.actor-figure').classList.toggle('walking',!!a.to&&state.phase==='playing');el.querySelector('.capacity-arc').setAttribute('stroke-dasharray',`${a.capacity} ${100-a.capacity}`);el.querySelector('.contribution-label').textContent=a.lastContribution?.until>state.time?`+${a.lastContribution.amount}`:'';
     }
     const agent=state.agents.find(a=>a.id===selectedAgent);
-    if(agent){
-      const nodes=[{x:agent.x,y:agent.y},...(agent.to?[nodeAt(state.map,agent.to)]:[]),...agent.route.map(id=>nodeAt(state.map,id))];
-      const f=state.fractures.find(f=>f.id===agent.targetId);
-      if(f){const e=edgeAt(state.map,f.edgeId),a=nodeAt(state.map,e.a),b=nodeAt(state.map,e.b);nodes.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2});}
-      const d='M'+nodes.map(n=>`${n.x},${n.y}`).join('L');
-      this.routeLayer.innerHTML=`<path d="${d}" fill="none" stroke="#fff2a8" stroke-width="9" opacity=".9" filter="url(#route-glow)"/><path class="route-path" d="${d}" fill="none" stroke="#fff9d0" stroke-width="3"/>`;
-    }else this.routeLayer.innerHTML='';
+    if(agent){const nodes=[{x:agent.x,y:agent.y},...(agent.to?[nodeAt(state.map,agent.to)]:[]),...agent.route.map(id=>nodeAt(state.map,id))],f=state.fractures.find(f=>f.id===agent.targetId);if(f){const e=edgeAt(state.map,f.edgeId),a=nodeAt(state.map,e.a),b=nodeAt(state.map,e.b);nodes.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2});}const d='M'+nodes.map(n=>`${n.x},${n.y}`).join('L');this.routeLayer.innerHTML=`<path d="${d}" fill="none" stroke="#55b7c5" stroke-width="10" opacity=".55" filter="url(#route-glow)"/><path class="route-path" d="${d}" fill="none" stroke="#b1ffeb" stroke-width="3.5"/>`;}else if(this.routeLayer.childElementCount)this.routeLayer.replaceChildren();
   }
 }
