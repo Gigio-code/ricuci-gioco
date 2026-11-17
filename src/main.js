@@ -1,4 +1,4 @@
-import { createPlayerStore, showPage, renderHome, renderRules } from './ui/navigation.js';
+import { createPlayerStore, showPage, renderHome, renderRules } from './ui/navigation.js?v=0.7';
 import { createDeckStore } from './progress/deck-store.js';
 import { createProgressStore, recordResult } from './progress/progress.js';
 import { LEVELS, nextLevelFor } from './config.js';
@@ -138,6 +138,13 @@ document.addEventListener('keydown',e=>{
   if(/^[1-4]$/.test(e.key)&&match.state.phase==='playing'){e.preventDefault();const card=match.state.hand[Number(e.key)-1];if(tutorialCard(card)){ui.selectCard(card,match.state);tutorialView();}}
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&match.state.phase==='playing'){togglePause(match.state);ui.update(match.state);}});
+// Fallback per i browser senza unità di dimensione del contenitore.
+if(!window.CSS?.supports?.('width','1cqw')){
+  const stage=document.querySelector('.game-stage'),shell=document.querySelector('.arena-shell');
+  const fit=()=>{const size=Math.floor(Math.min(stage.clientWidth,stage.clientHeight));if(size>0){shell.style.width=`${size}px`;shell.style.height=`${size}px`;}};
+  if(window.ResizeObserver)new ResizeObserver(fit).observe(stage);
+  window.addEventListener('resize',fit);requestAnimationFrame(fit);
+}
 let previous=performance.now(),lastUI=0;
 function frame(now){const dt=Math.max(0,(now-previous)/1000);previous=now;if(!tutorial||tutorial.step==='moving1'||tutorial.step==='moving2')match.advance(dt);tutorialTick();if(match.state.phase==='ended'&&!resultRecorded){resultRecorded=true;progress=recordResult(progress,match.state.result);persistent=store.save(progress);ui.setProgress(progress,persistent);renderHome(match.state,progress);}if(!$('game-view').hidden)renderer.render(match.state,ui);if(now-lastUI>100||match.state.phase==='ended'&&!ui.resultShown){ui.update(match.state);tutorialView();lastUI=now;}requestAnimationFrame(frame);}
 ui.update(match.state);renderHome(match.state,progress);renderer.render(match.state,ui);requestAnimationFrame(frame);

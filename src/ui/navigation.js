@@ -8,7 +8,7 @@ import { portrait, ART_COLORS, ART_ORDER } from './art.js';
 const $=id=>document.getElementById(id);
 export const PLAYER_KEY='ricuci.v03.player.v1';
 export function createPlayerStore(storage){return {load(){try{return (storage?.getItem(PLAYER_KEY)||'').trim().slice(0,40);}catch{return '';}},save(value){const name=String(value||'').trim().slice(0,40);if(!name)return false;try{if(!storage)return false;storage.setItem(PLAYER_KEY,name);return true;}catch{return false;}}};}
-export function showPage(name){for(const page of ['home','game','rules'])$(`${page}-view`).hidden=page!==name;document.body.classList.toggle('in-game',name==='game');if(name!=='game')window.scrollTo(0,0);}
+export function showPage(name){for(const page of ['home','game','rules'])$(`${page}-view`).hidden=page!==name;document.body.classList.toggle('in-game',name==='game');document.documentElement.scrollTop=0;document.body.scrollTop=0;window.scrollTo({top:0,left:0,behavior:'instant'});}
 export function renderHome(state,progress){
  const level=state.level,highest=LEVELS[progress.unlocked];
  $('progress-summary').textContent=`Formazione raggiunta: ${highest.name} · ${Object.keys(progress.medals).length} riconoscimenti ottenuti.`;

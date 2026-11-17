@@ -12,3 +12,28 @@ body.in-game{overflow:hidden}.game-view{height:100dvh;min-height:0;overflow:hidd
 .next-card{font-size:10px;font-weight:700;line-height:1.3;color:#f4d491;margin:0 0 4px}
 /* Presentazione dei personaggi esclusivamente nel tutorial. */
 #tutorial-roles-dialog{width:min(680px,calc(100% - 24px));max-height:min(90dvh,800px);overflow:auto}#tutorial-roles-dialog .dialog-heading{margin-bottom:10px}#tutorial-roles-dialog .dialog-heading h2{font-size:32px}#tutorial-roles-dialog>p{margin:8px 0}.tutorial-roles-note{font-size:12px!important;color:#9de9d2!important;font-weight:700}.tutorial-roles-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.tutorial-role{display:flex;align-items:center;gap:10px;background:#12253c;border:1px solid #456077;border-radius:9px;padding:9px;min-width:0}.tutorial-role .portrait{width:64px;height:76px;border-radius:5px;border:1px solid #8aa1ae}.tutorial-role b{font-size:14px;color:#fff1d5}.tutorial-role p{font-size:12px;line-height:1.4;margin:4px 0;color:#d8e6eb}.tutorial-roles-actions{display:flex;align-items:center;gap:8px;justify-content:flex-end;border-top:1px solid var(--line);padding-top:15px}.tutorial-roles-actions .button{min-height:44px}.tutorial-roles-actions #tutorial-roles-skip{margin-right:auto}@media(max-width:500px){#tutorial-roles-dialog{padding:16px;max-height:94dvh}#tutorial-roles-dialog .dialog-heading h2{font-size:27px}.tutorial-roles-list{grid-template-columns:1fr;gap:6px;margin:9px 0}.tutorial-role{padding:6px;gap:9px}.tutorial-role .portrait{width:50px;height:55px}.tutorial-role b{font-size:12px}.tutorial-role p{font-size:11px;line-height:1.3;margin:2px 0}.tutorial-roles-actions{padding-top:9px;gap:6px}.tutorial-roles-actions .button{font-size:10px;min-height:40px;padding:7px 9px}}
+/* La mappa occupa soltanto lo spazio realmente disponibile fra intestazione e carte. */
+.game-view{width:100%;min-width:0;grid-template-columns:minmax(0,1fr)}
+.game-workspace{height:100%;min-width:0;min-height:0;grid-template-rows:minmax(0,1fr);margin:0 auto}
+.game-stage{width:100%;height:100%;min-width:0;min-height:0;container-type:size}
+@supports(width:1cqw){.game-stage .arena-shell,body.in-tutorial .game-stage .arena-shell{width:min(100cqw,100cqh);height:min(100cqw,100cqh);max-width:100%;max-height:100%}}
+.game-bottom,.hand-resources{min-width:0}
+@media(max-height:700px) and (orientation:portrait){.game-view{grid-template-rows:52px 34px minmax(0,1fr) auto}body.in-tutorial .game-view{grid-template-rows:52px 64px minmax(0,1fr) auto}.game-bottom{padding-top:7px;padding-bottom:max(7px,env(safe-area-inset-bottom))}.game-bottom .agent-card{height:88px}.hand-resources{margin-top:7px}.action-hint{min-height:24px;font-size:9px}.energy-row{margin-bottom:4px}.game-top .timer{font-size:27px}}
+@media(max-height:590px) and (orientation:landscape){.game-bottom{gap:12px;padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}.game-bottom .hand{width:auto;flex:1 1 360px;min-width:0}.game-bottom .hand-resources{width:auto;flex:1 1 230px;min-width:0}.game-top{gap:12px}.game-mission{min-width:0}.arena-shell>svg{overflow:hidden}}
+/* In orizzontale le carte stanno accanto alla mappa, così l'arena resta grande. */
+@media(max-height:590px) and (orientation:landscape){
+ .game-view{grid-template-columns:minmax(0,1fr) minmax(180px,36vw);grid-template-rows:48px 30px minmax(0,1fr)}
+ body.in-tutorial .game-view{grid-template-rows:48px 56px minmax(0,1fr)}
+ .game-top{grid-area:1/1/2/3}.tactical-bar,.tutorial-bar{grid-area:2/1/3/3}.game-workspace{grid-area:3/1/4/2}
+ .game-bottom{grid-area:3/2/4/3;display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:6px;min-height:0;overflow-y:auto;padding:6px max(8px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) 8px;border-top:0;border-left:2px solid #4e6d85}
+ .game-bottom .hand{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;flex:0 0 auto;gap:6px}
+ .game-bottom .agent-card{height:clamp(54px,20vh,76px)}
+ .game-bottom .agent-card>b{font-size:10px;min-height:18px;bottom:0}
+ .game-bottom .agent-card>.portrait{bottom:20px}
+ .game-bottom .agent-card .cost{width:27px;height:29px;font-size:15px}
+ .game-bottom .hand-resources{width:100%;flex:0 0 auto}.game-bottom .energy-row{margin:0 0 3px;gap:6px}.game-bottom .energy-bolt{font-size:24px}.game-bottom .energy-track{height:10px}.game-bottom .game-energy>strong{font-size:16px}.game-bottom .action-hint{font-size:9px;line-height:1.3;min-height:0}.game-bottom .next-card{font-size:9px}
+}
+@media(max-height:590px) and (orientation:landscape){
+ .game-bottom .agent-card>.portrait{overflow:hidden;background-image:none}
+ .game-bottom .agent-card>.portrait::before{content:'';position:absolute;top:0;left:0;width:100%;aspect-ratio:3/4;background-image:url('assets/portraits.webp');background-size:400% 200%;background-position:var(--portrait-x) var(--portrait-y);background-repeat:no-repeat}
+}
