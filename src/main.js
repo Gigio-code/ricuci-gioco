@@ -11,7 +11,10 @@ import { openFracture } from './engine/generator.js';
 import { deploy, redirect } from './engine/actions.js';
 import { ArenaRenderer } from './rendering/arena.js?v=0.5';
 import { Interface } from './ui/interface.js';
+import { createSoundPlayer } from './audio/sounds.js';
+import { createSoundEvents } from './audio/events.js';
 const $=id=>document.getElementById(id),ui=new Interface();
+const soundPlayer=createSoundPlayer(),soundEvents=createSoundEvents((event,delay)=>soundPlayer.play(event,delay));
 let storage=null;try{storage=window.localStorage;}catch{}
 const playerStore=createPlayerStore(storage);let playerName=playerStore.load();$('player-name').value=playerName;
 const deckStore=createDeckStore(storage);ui.deck=deckStore.load();
@@ -21,15 +24,17 @@ let match=new Match({level:progress.unlocked,deck:ui.deckFor(progress.unlocked)}
 const TUTORIAL_KEY='ricuci.tutorial.v1';
 let tutorial=null,tutorialSeen=false;try{tutorialSeen=storage?.getItem(TUTORIAL_KEY)==='done';}catch{}
 function reset(level=Number($('level-select').value)){
+  soundPlayer.stop();soundEvents.reset();
   level=Math.max(1,Math.min(Number(level)||1,progress.unlocked));
   ui.reset();resultRecorded=false;match=new Match({level,deck:ui.deckFor(level)});renderer=new ArenaRenderer($('arena'),match.state.map);$('level-select').value=level;ui.update(match.state);renderHome(match.state,progress);renderer.render(match.state,ui);$('start-button').focus({preventScroll:true});
 }
 function launch(selectedLevel=Number($('level-select').value)){
   const level=Math.max(1,Math.min(Number(selectedLevel)||1,progress.unlocked));
   if (!LEVELS[level]) return;
+  soundPlayer.stop();soundPlayer.unlock();
   showPage('game');
   $('level-select').value=String(level);
-  ui.reset();resultRecorded=false;match=new Match({level,deck:ui.deckFor(level)});renderer=new ArenaRenderer($('arena'),match.state.map);start(match.state);ui.update(match.state);renderer.render(match.state,ui);
+  ui.reset();resultRecorded=false;match=new Match({level,deck:ui.deckFor(level)});renderer=new ArenaRenderer($('arena'),match.state.map);start(match.state);soundEvents.begin(match.state);ui.update(match.state);renderer.render(match.state,ui);
 }
 function rememberTutorial(){tutorialSeen=true;try{storage?.setItem(TUTORIAL_KEY,'done');}catch{}}
 function clearTutorial(){tutorial=null;document.body.classList.remove('in-tutorial');delete document.body.dataset.tutorialCard;delete document.body.dataset.tutorialTarget;$('tutorial-bar').hidden=true;$('tactical-bar').hidden=false;$('timer').setAttribute('aria-label','Tempo rimanente');}
@@ -42,11 +47,12 @@ function tutorialView(){
   $('tutorial-continue').hidden=tutorial.step!=='done';$('tutorial-skip').hidden=tutorial.step==='done';$('timer').textContent='PROVA';$('timer').setAttribute('aria-label','Tutorial, senza limite di tempo');
 }
 function startTutorial(){
+  soundPlayer.stop();soundPlayer.unlock();
   const chosenLevel=Number($('level-select').value)||1;
   showPage('game');ui.reset();resultRecorded=false;match=new Match({level:1,config:{duration:3600}});start(match.state);match.state.nextSpawn=Infinity;
   let fracture=null;for(const edge of match.state.map.edges){if(edge.fractureable&&(fracture=openFracture(match.state,edge.id,'esclusione')))break;}
   if(!fracture){clearTutorial();launch(chosenLevel);return;}
-  fracture.expiresAt=Infinity;tutorial={step:'first',fractureId:fracture.id,chosenLevel};
+  fracture.expiresAt=Infinity;tutorial={step:'first',fractureId:fracture.id,chosenLevel};soundEvents.begin(match.state,{tutorial:true});
   renderer=new ArenaRenderer($('arena'),match.state.map);document.body.classList.add('in-tutorial');$('tutorial-bar').hidden=false;$('tactical-bar').hidden=true;ui.update(match.state);renderer.render(match.state,ui);tutorialView();showTutorialRoles();
 }
 function finishTutorial(){if(!tutorial)return;const level=tutorial.chosenLevel;rememberTutorial();clearTutorial();launch(level);}
@@ -75,7 +81,7 @@ function renderTutorialRoles(){
   $('tutorial-roles-next').textContent=tutorialRolesPage===0?'Avanti →':'Proviamo! →';
 }
 function showTutorialRoles(){tutorialRolesPage=0;renderTutorialRoles();$('tutorial-roles-dialog').showModal();}
-function closeTutorialRoles(){$('tutorial-roles-dialog').close();$('hand').querySelector('[data-card="ascolto"]')?.focus({preventScroll:true});}
+function closeTutorialRoles(){$('tutorial-roles-dialog').close();soundPlayer.unlock();soundEvents.showTutorialFracture();$('hand').querySelector('[data-card="ascolto"]')?.focus({preventScroll:true});}
 $('tutorial-roles-back').addEventListener('click',()=>{tutorialRolesPage=0;renderTutorialRoles();$('tutorial-roles-next').focus();});
 $('tutorial-roles-next').addEventListener('click',()=>{if(tutorialRolesPage===0){tutorialRolesPage=1;renderTutorialRoles();$('tutorial-roles-next').focus();}else closeTutorialRoles();});
 $('tutorial-roles-skip').addEventListener('click',closeTutorialRoles);
@@ -90,7 +96,7 @@ $('tutorial-replay').addEventListener('click',()=>beginFromHome(true));$('rules-
 function send(options){
   if(!ui.selectedCard){ui.message('Scegli prima una carta nella tua mano.');return;}
   const result=deploy(match.state,ui.selectedCard,options);
-  if(result.ok){if(tutorial)tutorial.step=tutorial.step==='target1'?'moving1':'moving2';const gate=match.state.map.gates.find(g=>g.id===result.agent.node);const name=ui.selectedCard;ui.clearSelection();ui.selectedAgent=result.agent.id;ui.gateFeedback={id:gate.id,until:performance.now()+1800};ui.message(`${AGENTS[name].name} inviato dall’ingresso ${gate.direction}.`);}else ui.message(result.reason);
+  if(result.ok){if(tutorial)tutorial.step=tutorial.step==='target1'?'moving1':'moving2';const gate=match.state.map.gates.find(g=>g.id===result.agent.node);const name=ui.selectedCard;soundPlayer.unlock();soundEvents.deployed(name,result);ui.clearSelection();ui.selectedAgent=result.agent.id;ui.gateFeedback={id:gate.id,until:performance.now()+1800};ui.message(`${AGENTS[name].name} inviato dall’ingresso ${gate.direction}.`);}else ui.message(result.reason);
   ui.update(match.state);
 }
 function targetFracture(id){
@@ -103,7 +109,7 @@ function targetFracture(id){
   else {const f=match.state.fractures.find(f=>f.id===id);ui.message(`${CONFLICTS[f.type].name}: ${CONFLICTS[f.type].description} Scegli una carta e poi questa frattura.`);}
   ui.update(match.state);
 }
-$('start-button').addEventListener('click',()=>beginFromHome(false));$('resume-button').addEventListener('click',()=>{if(match.state.phase==='paused')togglePause(match.state);ui.update(match.state);$('hand').querySelector('button')?.focus({preventScroll:true});});
+$('start-button').addEventListener('click',()=>beginFromHome(false));$('resume-button').addEventListener('click',()=>{if(match.state.phase==='paused'){soundPlayer.unlock();togglePause(match.state);}ui.update(match.state);$('hand').querySelector('button')?.focus({preventScroll:true});});
 $('hand').addEventListener('click',e=>{const button=e.target.closest('[data-card]');if(button&&tutorialCard(button.dataset.card)){ui.selectCard(button.dataset.card,match.state);tutorialView();}});
 $('fracture-list').addEventListener('click',e=>{const button=e.target.closest('[data-fracture]');if(button)targetFracture(Number(button.dataset.fracture));});
 $('agent-list').addEventListener('click',e=>{const button=e.target.closest('[data-agent]');if(button)ui.selectAgent(Number(button.dataset.agent),match.state);});
@@ -122,7 +128,7 @@ $('player-form').addEventListener('submit',e=>{e.preventDefault();const input=$(
 $('player-name').addEventListener('input',e=>e.target.setCustomValidity(''));
 $('help-button').addEventListener('click',()=>showPage('rules'));
 $('header-rules').addEventListener('click',()=>showPage('rules'));
-function pauseGame(){if(match.state.phase==='playing'||match.state.phase==='paused'){togglePause(match.state);ui.update(match.state);if(match.state.phase==='paused')$('resume-button').focus({preventScroll:true});else $('hand').querySelector('button')?.focus({preventScroll:true});}}
+function pauseGame(){if(match.state.phase==='playing'||match.state.phase==='paused'){togglePause(match.state);if(match.state.phase==='paused')soundPlayer.stop();else soundPlayer.unlock();ui.update(match.state);if(match.state.phase==='paused')$('resume-button').focus({preventScroll:true});else $('hand').querySelector('button')?.focus({preventScroll:true});}}
 $('pause-button').addEventListener('click',pauseGame);
 $('game-home').addEventListener('click',e=>{e.preventDefault();if(match.state.phase==='playing')pauseGame();});
 $('quit-button').addEventListener('click',()=>{clearTutorial();reset();showPage('home');});
@@ -137,7 +143,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){ui.clearSelection();ui.focusedFracture=null;if(tutorial?.step==='target1')tutorial.step='first';if(tutorial?.step==='target2')tutorial.step='second';ui.update(match.state);tutorialView();}
   if(/^[1-4]$/.test(e.key)&&match.state.phase==='playing'){e.preventDefault();const card=match.state.hand[Number(e.key)-1];if(tutorialCard(card)){ui.selectCard(card,match.state);tutorialView();}}
 });
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&match.state.phase==='playing'){togglePause(match.state);ui.update(match.state);}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){soundPlayer.stop();if(match.state.phase==='playing'){togglePause(match.state);ui.update(match.state);}}});
 // Fallback per i browser senza unità di dimensione del contenitore.
 if(!window.CSS?.supports?.('width','1cqw')){
   const stage=document.querySelector('.game-stage'),shell=document.querySelector('.arena-shell');
@@ -146,5 +152,5 @@ if(!window.CSS?.supports?.('width','1cqw')){
   window.addEventListener('resize',fit);requestAnimationFrame(fit);
 }
 let previous=performance.now(),lastUI=0;
-function frame(now){const dt=Math.max(0,(now-previous)/1000);previous=now;if(!tutorial||tutorial.step==='moving1'||tutorial.step==='moving2')match.advance(dt);tutorialTick();if(match.state.phase==='ended'&&!resultRecorded){resultRecorded=true;progress=recordResult(progress,match.state.result);persistent=store.save(progress);ui.setProgress(progress,persistent);renderHome(match.state,progress);}if(!$('game-view').hidden)renderer.render(match.state,ui);if(now-lastUI>100||match.state.phase==='ended'&&!ui.resultShown){ui.update(match.state);tutorialView();lastUI=now;}requestAnimationFrame(frame);}
+function frame(now){const dt=Math.max(0,(now-previous)/1000);previous=now;if(!tutorial||tutorial.step==='moving1'||tutorial.step==='moving2')match.advance(dt);tutorialTick();if(!document.hidden&&(match.state.phase==='playing'||match.state.phase==='ended'))soundEvents.observe(match.state);if(match.state.phase==='ended'&&!resultRecorded){resultRecorded=true;soundEvents.end(match.state.result);progress=recordResult(progress,match.state.result);persistent=store.save(progress);ui.setProgress(progress,persistent);renderHome(match.state,progress);}if(!$('game-view').hidden)renderer.render(match.state,ui);if(now-lastUI>100||match.state.phase==='ended'&&!ui.resultShown){ui.update(match.state);tutorialView();lastUI=now;}requestAnimationFrame(frame);}
 ui.update(match.state);renderHome(match.state,progress);renderer.render(match.state,ui);requestAnimationFrame(frame);
