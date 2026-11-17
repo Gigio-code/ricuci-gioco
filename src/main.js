@@ -4,6 +4,8 @@ import { createProgressStore, recordResult } from './progress/progress.js';
 import { LEVELS, nextLevelFor } from './config.js';
 import { AGENTS } from './catalog/agents.js';
 import { CONFLICTS } from './catalog/conflicts.js';
+import { TUTORIAL_ROLES } from './ui/tutorial-roles.js';
+import { portrait, ART_COLORS } from './ui/art.js';
 import { Match, start, togglePause } from './engine/match.js';
 import { openFracture } from './engine/generator.js';
 import { deploy, redirect } from './engine/actions.js';
@@ -33,7 +35,7 @@ function rememberTutorial(){tutorialSeen=true;try{storage?.setItem(TUTORIAL_KEY,
 function clearTutorial(){tutorial=null;document.body.classList.remove('in-tutorial');delete document.body.dataset.tutorialCard;delete document.body.dataset.tutorialTarget;$('tutorial-bar').hidden=true;$('tactical-bar').hidden=false;$('timer').setAttribute('aria-label','Tempo rimanente');}
 function tutorialView(){
   if(!tutorial)return;
-  const steps={first:['1 / 4','Tocca la carta Ascolto.'],target1:['2 / 4','Tocca la frattura rossa.'],moving1:['2 / 4','Ascolto sta arrivando: guarda il suo intervento.'],second:['3 / 4','Hai ricucito una parte! Tocca Protezione.'],target2:['4 / 4','Tocca di nuovo la stessa frattura.'],moving2:['4 / 4','Protezione sta arrivando: guarda la ricucitura.'],done:['FATTO!','Frattura ricucita: la strada è di nuovo aperta.']};
+  const steps={first:['1 / 4','Ascolto aiuta a capire. Tocca la sua carta.'],target1:['2 / 4','Tocca la frattura rossa.'],moving1:['2 / 4','Ascolto sta arrivando: guarda il suo intervento.'],second:['3 / 4','Protezione aiuta le persone a sentirsi al sicuro. Tocca la sua carta.'],target2:['4 / 4','Tocca di nuovo la stessa frattura.'],moving2:['4 / 4','Protezione sta arrivando: guarda la ricucitura.'],done:['FATTO!','Frattura ricucita: la strada è di nuovo aperta.']};
   const [label,message]=steps[tutorial.step];if($('tutorial-step-label').textContent!==label)$('tutorial-step-label').textContent=label;if($('tutorial-instruction').textContent!==message)$('tutorial-instruction').textContent=message;
   document.body.dataset.tutorialCard=({first:'ascolto',target1:'ascolto',second:'protezione',target2:'protezione'})[tutorial.step]||'';
   document.body.dataset.tutorialTarget=String(tutorial.step==='target1'||tutorial.step==='target2');
@@ -45,7 +47,7 @@ function startTutorial(){
   let fracture=null;for(const edge of match.state.map.edges){if(edge.fractureable&&(fracture=openFracture(match.state,edge.id,'esclusione')))break;}
   if(!fracture){clearTutorial();launch(chosenLevel);return;}
   fracture.expiresAt=Infinity;tutorial={step:'first',fractureId:fracture.id,chosenLevel};
-  renderer=new ArenaRenderer($('arena'),match.state.map);document.body.classList.add('in-tutorial');$('tutorial-bar').hidden=false;$('tactical-bar').hidden=true;ui.update(match.state);renderer.render(match.state,ui);tutorialView();$('tutorial-bar').focus?.({preventScroll:true});
+  renderer=new ArenaRenderer($('arena'),match.state.map);document.body.classList.add('in-tutorial');$('tutorial-bar').hidden=false;$('tactical-bar').hidden=true;ui.update(match.state);renderer.render(match.state,ui);tutorialView();showTutorialRoles();
 }
 function finishTutorial(){if(!tutorial)return;const level=tutorial.chosenLevel;rememberTutorial();clearTutorial();launch(level);}
 function tutorialCard(id){
@@ -62,6 +64,22 @@ function tutorialTick(){
   if(tutorial.step==='moving2'&&f?.status==='repaired'){tutorial.step='done';ui.clearSelection();}
   tutorialView();
 }
+let tutorialRolesPage=0;
+function renderTutorialRoles(){
+  const start=tutorialRolesPage*4;
+  $('tutorial-roles-page').textContent=`${tutorialRolesPage+1} / 2`;
+  $('tutorial-roles-note').textContent=tutorialRolesPage===0?'I primi quattro sono disponibili subito.':'Questi personaggi si sbloccano nelle formazioni successive.';
+  $('tutorial-roles-list').innerHTML=TUTORIAL_ROLES.slice(start,start+4).map(role=>`<article class="tutorial-role" style="--agent-color:${ART_COLORS[role.id]}">${portrait(role.id)}<div><b>${AGENTS[role.id].name}</b><p>${role.text}</p></div></article>`).join('');
+  $('tutorial-roles-back').hidden=tutorialRolesPage===0;
+  $('tutorial-roles-skip').hidden=tutorialRolesPage===1;
+  $('tutorial-roles-next').textContent=tutorialRolesPage===0?'Avanti →':'Proviamo! →';
+}
+function showTutorialRoles(){tutorialRolesPage=0;renderTutorialRoles();$('tutorial-roles-dialog').showModal();}
+function closeTutorialRoles(){$('tutorial-roles-dialog').close();$('hand').querySelector('[data-card="ascolto"]')?.focus({preventScroll:true});}
+$('tutorial-roles-back').addEventListener('click',()=>{tutorialRolesPage=0;renderTutorialRoles();$('tutorial-roles-next').focus();});
+$('tutorial-roles-next').addEventListener('click',()=>{if(tutorialRolesPage===0){tutorialRolesPage=1;renderTutorialRoles();$('tutorial-roles-next').focus();}else closeTutorialRoles();});
+$('tutorial-roles-skip').addEventListener('click',closeTutorialRoles);
+$('tutorial-roles-dialog').addEventListener('cancel',e=>{e.preventDefault();closeTutorialRoles();});
 $('tutorial-skip').addEventListener('click',finishTutorial);$('tutorial-continue').addEventListener('click',finishTutorial);
 function beginFromHome(forceTutorial=false){
   const input=$('player-name');if(!input.value.trim()){showPage('home');input.setCustomValidity('Inserisci il tuo nome o un nome di fantasia.');input.reportValidity();input.focus();return;}
