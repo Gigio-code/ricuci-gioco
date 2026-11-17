@@ -9,7 +9,7 @@ import { portrait, ART_COLORS } from './ui/art.js';
 import { Match, start, togglePause } from './engine/match.js';
 import { openFracture } from './engine/generator.js';
 import { deploy, redirect } from './engine/actions.js';
-import { ArenaRenderer } from './rendering/arena.js?v=0.5';
+import { ArenaRenderer } from './rendering/arena.js?v=0.9';
 import { Interface } from './ui/interface.js';
 import { createSoundPlayer } from './audio/sounds.js';
 import { createSoundEvents } from './audio/events.js';

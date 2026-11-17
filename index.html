@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#101c32">
-  <meta name="ricuci-app" content="0.8">
+  <meta name="ricuci-app" content="0.9">
   <title>RICUCI — Il quartiere prende vita</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/portraits.webp" as="image">
   <link rel="preload" href="assets/neighborhood.webp" as="image">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="navigation.css">
-  <link rel="stylesheet" href="quartiere.css?v=0.7">
-  <script type="module" src="src/main.js?v=0.8"></script>
+  <link rel="stylesheet" href="quartiere.css?v=0.9">
+  <script type="module" src="src/main.js?v=0.9"></script>
 </head>
 <body>
 <section id="home-view" class="screen home-view">
@@ -41,7 +41,7 @@
     </div>
     <section class="journey"><div><p class="eyebrow">UN LEGAME ALLA VOLTA</p><h2>Fai crescere la tua squadra.</h2></div><div id="formation-list" class="formation-list"></div></section>
     <div class="home-bottom"><p>Le fratture restano. I legami cambiano.</p><button class="button ghost home-rules" id="help-button">Regole e spirito del gioco <span aria-hidden="true">↗</span></button></div>
-    <p class="home-note">RICUCI · Quartiere vivo 0.8 · Un gioco di strategia ispirato alla giustizia riparativa.</p>
+    <p class="home-note">RICUCI · Quartiere vivo 0.9 · Un gioco di strategia ispirato alla giustizia riparativa.</p>
   </main>
 </section>
 <section id="game-view" class="screen game-view" hidden aria-label="Partita di RICUCI">
@@ -49,7 +49,7 @@
   <div id="tutorial-bar" class="tutorial-bar" hidden><div class="tutorial-copy"><span id="tutorial-step-label" class="tutorial-kicker"></span><strong id="tutorial-instruction" role="status" aria-live="polite"></strong></div><button class="button ghost tutorial-skip" id="tutorial-skip" type="button">Salta</button><button class="button primary tutorial-continue" id="tutorial-continue" type="button" hidden>Inizia la partita ➜</button></div>
   <div class="tactical-bar" id="tactical-bar"><div><span class="status-dot coral"></span><b id="live-active">0</b> <span id="live-active-label">fratture</span></div><div><span class="status-dot gold"></span><b id="live-repaired">0</b> <span id="live-repaired-label">ricucite</span></div><div class="live-work"><span>Quartiere ricucito</span><b id="live-work">0%</b><div class="live-work-track"><i id="live-work-fill"></i></div></div></div>
   <div class="game-workspace">
-    <div class="game-stage"><div class="arena-shell"><svg id="arena" viewBox="10 10 700 700" preserveAspectRatio="xMidYMid meet" aria-label="Quartiere con rete di strade e quattro ingressi: Nord, Est, Sud, Ovest"></svg><div id="repair-toast" class="repair-toast" role="status" aria-live="polite" hidden><span aria-hidden="true">✦</span> LEGAME RICUCITO!</div><div id="pause-overlay" class="arena-overlay hidden"><div class="intro-card pause-card"><span class="eyebrow">IL QUARTIERE TI ASPETTA</span><h2>Un attimo<br>di pausa.</h2><p>Il tempo e tutti gli agenti sono fermi.</p><button class="button primary" id="resume-button">Riprendi la partita <span aria-hidden="true">➜</span></button><button class="button ghost" id="quit-button">Torna alla Home</button></div></div></div></div>
+    <div class="game-stage"><div class="arena-shell"><svg id="arena" viewBox="10 10 700 700" preserveAspectRatio="xMidYMid meet" aria-label="Quartiere con rete di strade e quattro ingressi: Nord, Est, Sud, Ovest"></svg><span id="repair-announcement" class="sr-only" role="status" aria-live="polite"></span><div id="pause-overlay" class="arena-overlay hidden"><div class="intro-card pause-card"><span class="eyebrow">IL QUARTIERE TI ASPETTA</span><h2>Un attimo<br>di pausa.</h2><p>Il tempo e tutti gli agenti sono fermi.</p><button class="button primary" id="resume-button">Riprendi la partita <span aria-hidden="true">➜</span></button><button class="button ghost" id="quit-button">Torna alla Home</button></div></div></div></div>
     <aside class="game-sidebar"><section><p class="eyebrow">QUI SERVE LA TUA SQUADRA</p><h2>Fratture attive <span id="active-count"></span></h2><div id="fracture-list" class="fracture-list"></div></section><section><p class="eyebrow">IN CAMPO</p><h2>Agenti nel quartiere <span id="agents-count"></span></h2><div id="agent-list" class="agent-list"></div></section><p class="sidebar-tip">Scegli una carta, poi una frattura o un ingresso. Tocca un agente per cambiarne la meta.</p><div id="fracture-detail" class="fracture-detail" hidden></div></aside>
   </div>
   <footer class="game-bottom"><div class="hand" id="hand" aria-label="Le quattro carte disponibili"></div><div class="hand-resources"><div class="energy-row"><span class="energy-bolt" aria-hidden="true">ϟ</span><div id="energy-track" class="energy-track" role="progressbar" aria-label="Energia disponibile" aria-valuemin="0" aria-valuemax="8" aria-valuenow="6"><div id="energy-fill"></div></div><div class="game-energy"><strong id="energy-value">6.0</strong><span> / <span id="energy-max">8</span></span></div></div><p id="next-card" class="next-card" role="status" aria-live="polite"></p><p class="action-hint" id="action-hint" role="status" aria-live="polite"></p></div></footer>
