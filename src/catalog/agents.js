@@ -1,3 +1,4 @@
+import { defaultDeckFor } from '../config.js';
 export const AGENTS = {
   ascolto: { id: 'ascolto', name: 'Ascolto', short: 'A', cost: 1, color: '#346c64', icon: 'ear', description: 'Comprendere le esperienze delle persone coinvolte.' },
   riconoscimento: { id: 'riconoscimento', name: 'Riconoscimento', short: 'R', cost: 2, color: '#80613c', icon: 'eye', description: 'Rendere visibili il danno e i bisogni.' },
@@ -8,4 +9,4 @@ export const AGENTS = {
   riparazione: { id: 'riparazione', name: 'Riparazione', short: 'Rp', cost: 4, color: '#9b792e', icon: 'stitch', description: 'Ricomporre concretamente la frattura.' },
   comunita: { id: 'comunita', name: 'Comunità', short: 'C', cost: 4, color: '#64734d', icon: 'people', description: 'Coinvolgere la rete delle relazioni e del sostegno.' },
 };
-export const DEFAULT_DECK = ['ascolto', 'riconoscimento', 'protezione', 'responsabilita', 'dialogo', 'comunita'];
+export const DEFAULT_DECK = defaultDeckFor(3);

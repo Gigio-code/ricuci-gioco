@@ -14,8 +14,8 @@ const allConflicts = ['sfotto','insulto','esclusione','pettegolezzo','diffidenza
 export const LEVELS = {
   1: { id:1, name:'FORMAZIONE 1', duration:180, firstSpawn:3, interval:10, maxActive:4, deadline:35, energyMax:8, secondsPerPoint:3, agents:first, deckSize:4, conflicts:allConflicts.slice(0,4), description:'Prima frattura dopo 3 s · poi ogni 10 s · fino a 4 attive' },
   2: { id:2, name:'FORMAZIONE 2', duration:180, firstSpawn:3, interval:7, maxActive:6, deadline:32, energyMax:10, secondsPerPoint:2.5, agents:second, deckSize:6, conflicts:allConflicts, description:'Prima frattura dopo 3 s · poi ogni 7 s · fino a 6 attive' },
-  4: { id:4, name:'FORMAZIONE 4', duration:180, interval:4, maxActive:10, deadline:28, energyMax:12, secondsPerPoint:2, agents:third, deckSize:6, conflicts:allConflicts, consequences:true, description:'Una frattura ogni 4 s · fino a 10 attive · conseguenze potenziate' },
-  3: { recognitionName:'Riconoscimento di eccellenza', id:3, name:'FORMAZIONE 3', duration:180, interval:5, maxActive:8, deadline:30, energyMax:12, secondsPerPoint:2, agents:third, deckSize:6, conflicts:allConflicts, description:'Una frattura ogni 5 s · fino a 8 attive' },
+  4: { id:4, name:'FORMAZIONE 4', duration:180, interval:4, maxActive:10, deadline:28, energyMax:12, secondsPerPoint:2, agents:third, deckSize:third.length, conflicts:allConflicts, consequences:true, description:'Una frattura ogni 4 s · fino a 10 attive · conseguenze potenziate' },
+  3: { recognitionName:'Riconoscimento di eccellenza', id:3, name:'FORMAZIONE 3', duration:180, interval:5, maxActive:8, deadline:30, energyMax:12, secondsPerPoint:2, agents:third, deckSize:third.length, conflicts:allConflicts, description:'Una frattura ogni 5 s · fino a 8 attive' },
 };
 export const defaultDeckFor = level => LEVELS[level].agents.slice(0, LEVELS[level].deckSize);
 

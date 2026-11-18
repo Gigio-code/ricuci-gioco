@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#101c32">
-  <meta name="ricuci-app" content="0.13">
+  <meta name="ricuci-app" content="0.14">
   <title>RICUCI — Il quartiere prende vita</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/portraits.webp" as="image">
@@ -12,7 +12,8 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="navigation.css">
   <link rel="stylesheet" href="quartiere.css?v=0.11">
-  <script type="module" src="src/main.js?v=0.13"></script>
+  <script type="importmap">{"imports": {"./src/config.js": "./src/config.js?v=0.14", "./src/catalog/agents.js": "./src/catalog/agents.js?v=0.14"}}</script>
+  <script type="module" src="src/main.js?v=0.14"></script>
 </head>
 <body>
 <section id="home-view" class="screen home-view">
@@ -37,11 +38,11 @@
         <button class="medal-button" id="medal-button" aria-haspopup="dialog"><span class="medal-art" aria-hidden="true">✦</span><span><b>I tuoi riconoscimenti</b><small id="medal-summary">0 / 4 conseguiti</small></span><span aria-hidden="true">↗</span></button>
         <p id="storage-status" class="storage-status" hidden>Salvataggio locale non disponibile: i progressi potrebbero andare persi.</p>
       </section>
-      <section class="home-card team-card"><div class="team-heading"><div><p class="eyebrow">VOLTI DIVERSI. UNA SQUADRA.</p><h2>Le tue carte</h2></div><button class="deck-edit" id="deck-button"><span id="deck-action"></span><span aria-hidden="true">↗</span></button></div><p id="training-agents" class="chosen-deck"></p><span id="deck-count" class="sr-only"></span><div id="home-cards" class="home-cards"></div></section>
+      <section class="home-card team-card"><div class="team-heading"><div><p class="eyebrow">VOLTI DIVERSI. UNA SQUADRA.</p><h2>Le tue carte</h2></div></div><p id="training-agents" class="chosen-deck"></p><div id="home-cards" class="home-cards"></div></section>
     </div>
     <section class="journey"><div><p class="eyebrow">UN LEGAME ALLA VOLTA</p><h2>Fai crescere la tua squadra.</h2></div><div id="formation-list" class="formation-list"></div></section>
     <div class="home-bottom"><p>Le fratture restano. I legami cambiano.</p><button class="button ghost home-rules" id="help-button">Regole e spirito del gioco <span aria-hidden="true">↗</span></button></div>
-    <p class="home-note">RICUCI · Quartiere vivo 0.13 · Un gioco di strategia ispirato alla giustizia riparativa.</p>
+    <p class="home-note">RICUCI · Quartiere vivo 0.14 · Un gioco di strategia ispirato alla giustizia riparativa.</p>
   </main>
 </section>
 <section id="game-view" class="screen game-view" hidden aria-label="Partita di RICUCI">
@@ -64,7 +65,6 @@
   <section id="spirito" class="rules-section spirit"><p class="eyebrow">06 / IL SENSO</p><h2>Le cicatrici raccontano una storia.</h2><p>I conflitti lasciano conseguenze. Ascoltare, riconoscere, assumersi responsabilità e riparare sono possibilità differenti: ciascuna comporta scelte, limiti e conseguenze.</p><p>Non sempre tutte le fratture possono essere ricucite. Una comunità riparata conserva le tracce della propria storia.</p><p>RICUCI è un gioco strategico ispirato alla giustizia riparativa. Non è una simulazione scientifica dei conflitti né una certificazione di competenze professionali.</p></section></details><button class="button primary" id="rules-done">Torna alla Home →</button>
 </main></section>
 <dialog id="tutorial-roles-dialog" aria-labelledby="tutorial-roles-title" aria-describedby="tutorial-roles-help"><div class="dialog-heading"><div><p class="eyebrow">CONOSCI LA TUA SQUADRA · <span id="tutorial-roles-page">1 / 2</span></p><h2 id="tutorial-roles-title">Scegli la carta<br>giusta!</h2></div></div><p id="tutorial-roles-help">Ogni carta costa energia e lavora meglio su alcune fratture. Qui vedi i suoi punti di forza.</p><p>Su una frattura nuova servono di solito 100 punti. I punti indicati sono il massimo: il contributo effettivo può essere inferiore.</p><p id="tutorial-roles-note" class="tutorial-roles-note"></p><div id="tutorial-roles-list" class="tutorial-roles-list"></div><div class="tutorial-roles-actions"><button class="button ghost" id="tutorial-roles-back" type="button" hidden>← Indietro</button><button class="button ghost" id="tutorial-roles-skip" type="button">Vai alla prova</button><button class="button primary" id="tutorial-roles-next" type="button">Avanti →</button></div></dialog>
-<dialog id="deck-dialog"><div class="dialog-heading"><div><p class="eyebrow">LA TUA STRATEGIA</p><h2>Sei agenti.<br>Il tuo mazzo.</h2></div><button class="icon-button" id="close-deck" aria-label="Chiudi scelta mazzo">×</button></div><p>Seleziona esattamente sei agenti diversi. Ne vedrai quattro alla volta; ogni carta giocata torna in fondo alla coda.</p><div id="deck-options" class="deck-options"></div><div class="dialog-footer"><span id="deck-status" role="status"></span><button id="save-deck" class="button primary">Conferma il mazzo →</button></div></dialog>
 <dialog id="medal-dialog"><div class="dialog-heading"><div><p class="eyebrow">IL TUO PERCORSO</p><h2>Tracce di quello<br>che hai fatto.</h2></div><button class="icon-button" id="close-medals" aria-label="Chiudi riconoscimenti">×</button></div><div id="medal-content"></div><p class="help-note">Riconoscimenti interni al gioco: non sono qualifiche professionali.</p></dialog>
 <dialog id="result-dialog"><div class="dialog-heading"><div><p class="eyebrow">IL QUARTIERE DOPO DI TE</p><h2 id="result-work-title">Ogni legame conta.</h2></div></div><div id="result-content"></div><div class="dialog-footer result-actions"><button class="button primary hidden" id="next-level-button"></button><button class="button ghost" id="restart-button">Torna alla Home</button></div></dialog>
 <div hidden aria-hidden="true"><div id="start-overlay"></div><div id="effect-legend"></div><span id="phase-label"></span><span id="energy-detail"></span><span id="repaired-count"></span><span id="partial-count"></span><span id="unresolved-count"></span><span id="work-value"></span><div id="work-fill"></div><span id="goal-label"></span><select id="gate-select"></select><button id="deploy-button"></button><ol id="event-log"></ol><div id="agent-guide"></div><button id="close-result"></button><button id="review-button"></button></div>

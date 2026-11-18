@@ -1,5 +1,5 @@
-import { LEVELS, defaultDeckFor, orderedLevels, nextLevelFor } from '../config.js';
-import { AGENTS, DEFAULT_DECK } from '../catalog/agents.js';
+import { LEVELS, orderedLevels, nextLevelFor } from '../config.js';
+import { AGENTS } from '../catalog/agents.js';
 import { CONFLICTS } from '../catalog/conflicts.js';
 import { AGENT_ORDER, EFFICACY } from '../catalog/efficacy.js?v=0.11';
 import { effectDescription, interventionFactor } from '../engine/consequences.js';
@@ -13,7 +13,7 @@ const canAfford = (state, id) => state.energy + 1e-8 >= AGENTS[id].cost;
 export function timeLabel(seconds) { const t=Math.max(0,Math.ceil(seconds-1e-7));return `${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`; }
 export class Interface {
   constructor() {
-    this.progress={unlocked:1,medals:{},best:{}};this.persistent=true;this.deck=[...DEFAULT_DECK];this.draft=[...this.deck];this.selectedCard=null;this.selectedAgent=null;this.focusedFracture=null;this.gateFeedback=null;this.awaitingEnergyCard=null;this.handSignature='';this.resultShown=false;this.messageUntil=0;this.fractureRows=new Map();this.agentRows=new Map();
+    this.progress={unlocked:1,medals:{},best:{}};this.persistent=true;this.selectedCard=null;this.selectedAgent=null;this.focusedFracture=null;this.gateFeedback=null;this.awaitingEnergyCard=null;this.handSignature='';this.resultShown=false;this.messageUntil=0;this.fractureRows=new Map();this.agentRows=new Map();
     $('gate-select').innerHTML=[['n0-0','Nord'],['n0-3','Est'],['n0-6','Sud'],['n0-9','Ovest']].map(([id,name])=>`<option value="${id}">${name}</option>`).join('');
     $('agent-guide').innerHTML=Object.values(AGENTS).map(a=>`<div style="color:${a.color}">${icon(a.icon)}<p><b>${a.name} · ${a.cost} energia</b>${a.description}</p></div>`).join('');
     $('efficacy-table').innerHTML=`<thead><tr><th>Frattura</th>${AGENT_ORDER.map(id=>`<th>${AGENTS[id].name}</th>`).join('')}</tr></thead><tbody>${Object.values(CONFLICTS).map(f=>`<tr><td>${f.name}</td>${AGENT_ORDER.map(id=>`<td>${EFFICACY[f.id][id]}</td>`).join('')}</tr>`).join('')}</tbody>`;
@@ -26,7 +26,6 @@ export class Interface {
     $('medal-summary').textContent=`${Object.keys(progress.medals).length} / ${orderedLevels().length} conseguiti`;
     $('storage-status').hidden=persistent;
   }
-  deckFor(level){ const f=LEVELS[level];return f.agents.length>f.deckSize && this.deck.length===f.deckSize && this.deck.every(id=>f.agents.includes(id))?[...this.deck]:defaultDeckFor(level); }
   showMedals(){
     const rows=Object.values(LEVELS).map(level=>{
       const earned=!!this.progress.medals[level.id], next=nextLevelFor(level.id);
@@ -48,13 +47,6 @@ export class Interface {
     this.update(state);
   }
   selectAgent(id,state){this.selectedAgent=this.selectedAgent===id?null:id;this.selectedCard=null;this.awaitingEnergyCard=null;this.messageUntil=0;this.update(state);}
-  showDeck(level){this.deckLevel=level;this.draft=this.deckFor(level.id);this.drawDeck();$('deck-dialog').showModal();}
-  drawDeck(){
-    $('deck-options').innerHTML=this.deckLevel.agents.map(id=>AGENTS[id]).map(a=>`<button class="deck-option" data-deck="${a.id}" aria-pressed="${this.draft.includes(a.id)}" style="--agent-color:${ART_COLORS[a.id]}">${portrait(a.id)}<span><b>${a.name}</b><small>${a.description}</small></span><em>${a.cost} ϟ</em></button>`).join('');
-    $('deck-status').textContent=`${this.draft.length} / ${this.deckLevel.deckSize} selezionati${this.draft.length===this.deckLevel.deckSize?'':` · scegli esattamente ${this.deckLevel.deckSize} agenti`}`;$('save-deck').disabled=this.draft.length!==this.deckLevel.deckSize;
-  }
-  toggleDeck(id){const i=this.draft.indexOf(id);if(i>=0)this.draft.splice(i,1);else this.draft.push(id);this.drawDeck();$('deck-options').querySelector(`[data-deck="${id}"]`)?.focus({preventScroll:true});}
-  saveDeck(){if(this.draft.length!==this.deckLevel.deckSize||new Set(this.draft).size!==this.draft.length||this.draft.some(id=>!this.deckLevel.agents.includes(id)))return false;this.deck=[...this.draft];$('deck-dialog').close();return true;}
   reset(){this.clearSelection();this.focusedFracture=null;this.gateFeedback=null;this.awaitingEnergyCard=null;this.resultShown=false;this.handSignature='';this.fractureRows.clear();this.agentRows.clear();$('fracture-list').replaceChildren();$('agent-list').replaceChildren();if($('result-dialog').open)$('result-dialog').close();}
   update(state){
     const playing=state.phase==='playing',ended=state.phase==='ended';
@@ -65,11 +57,6 @@ export class Interface {
     $('start-overlay').classList.toggle('hidden',state.phase!=='ready');$('pause-overlay').classList.toggle('hidden',state.phase!=='paused');
     $('timer').textContent=timeLabel(state.config.duration-state.time);$('timer').classList.toggle('urgent',state.config.duration-state.time<=30);
     $('level-label').textContent=state.level.name;
-    $('training-agents').textContent=`Mazzo scelto (${state.deck.length}): ${state.deck.map(id=>AGENTS[id].name).join(', ')}.${state.level.agents.length>state.deck.length?' Seleziona Personalizza per scegliere tra tutti gli agenti disponibili.':''}`;
-    const configurable=state.level.agents.length>state.level.deckSize;
-    $('deck-button').disabled=!configurable;
-    $('deck-count').textContent=configurable?`${state.level.deckSize} carte su ${state.level.agents.length}`:`${state.level.deckSize} agenti disponibili`;
-    $('deck-action').textContent=configurable?'Personalizza ↗':'Mazzo fisso';
     $('phase-label').textContent=playing?'La rete è in movimento':state.phase==='paused'?'Partita in pausa':ended?'La memoria resta':'Pronta a cominciare';
     $('energy-value').textContent=energyLabel(state.energy);$('energy-fill').style.width=`${state.energy/state.config.energy.max*100}%`;$('energy-track').setAttribute('aria-valuenow',energyLabel(state.energy));$('energy-track').setAttribute('aria-valuemax',state.config.energy.max);$('energy-max').textContent=state.config.energy.max;$('energy-detail').textContent=`+1 punto ogni ${String(state.config.energy.secondsPerPoint).replace('.',',')} secondi · capacità agente: 100`;
     if(playing && this.awaitingEnergyCard && state.hand.includes(this.awaitingEnergyCard) && canAfford(state,this.awaitingEnergyCard)){

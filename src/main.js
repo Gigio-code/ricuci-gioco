@@ -1,5 +1,4 @@
-import { createPlayerStore, showPage, renderHome, renderRules } from './ui/navigation.js?v=0.11';
-import { createDeckStore } from './progress/deck-store.js';
+import { createPlayerStore, showPage, renderHome, renderRules } from './ui/navigation.js?v=0.14';
 import { createProgressStore, recordResult } from './progress/progress.js';
 import { LEVELS, nextLevelFor } from './config.js';
 import { AGENTS } from './catalog/agents.js';
@@ -11,23 +10,22 @@ import { Match, start, togglePause } from './engine/match.js?v=0.11';
 import { openFracture } from './engine/generator.js';
 import { deploy, redirect } from './engine/actions.js?v=0.11';
 import { ArenaRenderer } from './rendering/arena.js?v=0.10';
-import { Interface } from './ui/interface.js?v=0.11';
+import { Interface } from './ui/interface.js?v=0.14';
 import { createSoundPlayer } from './audio/sounds.js?v=0.13';
 import { createSoundEvents } from './audio/events.js';
 const $=id=>document.getElementById(id),ui=new Interface();
 const soundPlayer=createSoundPlayer(),soundEvents=createSoundEvents((event,delay)=>soundPlayer.play(event,delay));
 let storage=null;try{storage=window.localStorage;}catch{}
 const playerStore=createPlayerStore(storage);let playerName=playerStore.load();$('player-name').value=playerName;
-const deckStore=createDeckStore(storage);ui.deck=deckStore.load();
 const store=createProgressStore(storage);const loaded=store.load();let progress=loaded.progress,persistent=loaded.persistent;
 ui.setProgress(progress,persistent);$('level-select').value=String(progress.unlocked);renderRules();showPage('home');
-let match=new Match({level:progress.unlocked,deck:ui.deckFor(progress.unlocked)}),renderer=new ArenaRenderer($('arena'),match.state.map),resultRecorded=false;
+let match=new Match({level:progress.unlocked}),renderer=new ArenaRenderer($('arena'),match.state.map),resultRecorded=false;
 const TUTORIAL_KEY='ricuci.tutorial.v1';
 let tutorial=null,tutorialSeen=false;try{tutorialSeen=storage?.getItem(TUTORIAL_KEY)==='done';}catch{}
 function reset(level=Number($('level-select').value)){
   soundPlayer.stop();soundEvents.reset();
   level=Math.max(1,Math.min(Number(level)||1,progress.unlocked));
-  ui.reset();resultRecorded=false;match=new Match({level,deck:ui.deckFor(level)});renderer=new ArenaRenderer($('arena'),match.state.map);$('level-select').value=level;ui.update(match.state);renderHome(match.state,progress);renderer.render(match.state,ui);$('start-button').focus({preventScroll:true});
+  ui.reset();resultRecorded=false;match=new Match({level});renderer=new ArenaRenderer($('arena'),match.state.map);$('level-select').value=level;ui.update(match.state);renderHome(match.state,progress);renderer.render(match.state,ui);$('start-button').focus({preventScroll:true});
 }
 function launch(selectedLevel=Number($('level-select').value)){
   const level=Math.max(1,Math.min(Number(selectedLevel)||1,progress.unlocked));
@@ -35,7 +33,7 @@ function launch(selectedLevel=Number($('level-select').value)){
   soundPlayer.stop();soundPlayer.unlock();
   showPage('game');
   $('level-select').value=String(level);
-  ui.reset();resultRecorded=false;match=new Match({level,deck:ui.deckFor(level)});renderer=new ArenaRenderer($('arena'),match.state.map);start(match.state);soundEvents.begin(match.state);ui.update(match.state);renderer.render(match.state,ui);
+  ui.reset();resultRecorded=false;match=new Match({level});renderer=new ArenaRenderer($('arena'),match.state.map);start(match.state);soundEvents.begin(match.state);ui.update(match.state);renderer.render(match.state,ui);
 }
 function rememberTutorial(){tutorialSeen=true;try{storage?.setItem(TUTORIAL_KEY,'done');}catch{}}
 function clearTutorial(){tutorial=null;document.body.classList.remove('in-tutorial');delete document.body.dataset.tutorialCard;delete document.body.dataset.tutorialTarget;$('tutorial-bar').hidden=true;$('tactical-bar').hidden=false;$('timer').setAttribute('aria-label','Tempo rimanente');}
@@ -121,9 +119,6 @@ function mapAction(e){
   if(gate&&!tutorial)send({gateId:gate.dataset.gate});else if(fracture)targetFracture(Number(fracture.dataset.fracture));else if(agent&&!tutorial)ui.selectAgent(Number(agent.dataset.agent),match.state);
 }
 $('arena').addEventListener('click',mapAction);$('arena').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();mapAction(e);}});
-$('deck-button').addEventListener('click',()=>{if(match.state.level.agents.length>match.state.level.deckSize)ui.showDeck(match.state.level);});$('close-deck').addEventListener('click',()=>$('deck-dialog').close());
-$('deck-options').addEventListener('click',e=>{const button=e.target.closest('[data-deck]');if(button)ui.toggleDeck(button.dataset.deck);});
-$('save-deck').addEventListener('click',()=>{if(ui.saveDeck()){const saved=deckStore.save(ui.deck);reset();if(!saved)ui.message('Mazzo applicato alla sessione; salvataggio nel browser non disponibile.');}});
 $('medal-button').addEventListener('click',()=>{if(match.state.phase==='playing')togglePause(match.state);ui.update(match.state);ui.showMedals();});$('close-medals').addEventListener('click',()=>$('medal-dialog').close());
 $('player-form').addEventListener('submit',e=>{e.preventDefault();const input=$('player-name');input.setCustomValidity('');const name=input.value.trim();if(!name){input.setCustomValidity('Inserisci il tuo nome o un nome di fantasia.');input.reportValidity();return;}playerName=name;input.value=name;$('name-status').textContent=playerStore.save(name)?'Nome salvato in questo browser.':'Nome valido per questa sessione; salvataggio non disponibile.';});
 $('player-name').addEventListener('input',e=>e.target.setCustomValidity(''));
