@@ -4,10 +4,44 @@ export function createSoundPlayer({contextFactory}={}) {
   let context=null,output=null,failed=false,seed=0x29ab41;
   const active=new Set(),buffers=new Map();
   const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return (seed>>>0)/2147483648-1;};
+  const cards = ['ascolto','riconoscimento','dialogo','protezione','responsabilita','mediazione','riparazione','comunita'];
+  const recordings = new Map();
+  let generation = 0;
+
+  function loadCard(card) {
+    if (recordings.has(card)) return recordings.get(card);
+    const url = new URL('../../assets/audio/' + card + '.wav', import.meta.url);
+    const recording = fetch(url)
+      .then(response => {
+        if (!response.ok) throw new Error('Audio ' + response.status);
+        return response.arrayBuffer();
+      })
+      .then(bytes => context.decodeAudioData(bytes))
+      .catch(() => {
+        recordings.delete(card);
+        return null;
+      });
+    recordings.set(card, recording);
+    return recording;
+  }
+
+  async function playCard(card, delay) {
+    if (!cards.includes(card)) return;
+    const current = generation;
+    const buffer = await loadCard(card);
+    if (!buffer || current !== generation) return;
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(output);
+    active.add(source);
+    source.onended = () => { active.delete(source); source.disconnect(); };
+    source.start(context.currentTime + delay);
+  }
+
   function unlock(){
     if(failed)return;
     try{
-      if(!context){const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!contextFactory&&!C)return;context=contextFactory?contextFactory():new C();output=context.createGain();output.gain.value=.65;output.connect(context.destination);}
+      if(!context){const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!contextFactory&&!C)return;context=contextFactory?contextFactory():new C();output=context.createGain();output.gain.value=.65;output.connect(context.destination);cards.forEach(loadCard);}
       if((context.state==='suspended'||context.state==='interrupted')&&!context.startRendering)context.resume()?.catch?.(()=>{});
     }catch{failed=true;}
   }
@@ -41,23 +75,16 @@ export function createSoundPlayer({contextFactory}={}) {
   function play(event,delay=0){
     if(!context||failed)return;
     try{const t=context.currentTime+Math.max(0,delay)+.005;
+      if (event.startsWith('card:')) return playCard(event.slice(5), Math.max(0, delay));
       switch(event){
         case 'start': rub(t,.12,.09);pluck(t+.06,294,.18);pluck(t+.18,392,.16);pluck(t+.30,494,.15);break;
         case 'end-success': pluck(t,392,.17);pluck(t+.14,494,.16);pluck(t+.28,587,.17);rub(t+.3,.16,.05);break;
         case 'end': pluck(t,330,.16);pluck(t+.17,392,.15);break;
         case 'fracture': rub(t,.30,.30,.85);for(const d of [0,.055,.12,.19])rub(t+d,.045,.14,1.2+d);break;
         case 'repair': rub(t,.13,.12,1.3);rub(t+.13,.15,.10,1.1);pluck(t+.18,523,.12);break;
-        case 'card:ascolto': rub(t,.14,.08);pluck(t+.045,330,.15);break;
-        case 'card:dialogo': pluck(t,392,.16);pluck(t+.12,494,.14);break;
-        case 'card:protezione': rub(t,.06,.12,.8);pluck(t+.02,220,.20);break;
-        case 'card:riparazione': rub(t,.10,.14,1.3);rub(t+.12,.10,.12,1.1);pluck(t+.16,440,.13);break;
-        case 'card:riconoscimento': pluck(t,523,.16);rub(t+.07,.08,.07,1.4);break;
-        case 'card:mediazione': pluck(t,330,.14);pluck(t+.06,440,.13);break;
-        case 'card:responsabilita': pluck(t,247,.18);pluck(t+.14,330,.14);break;
-        case 'card:comunita': pluck(t,294,.14);pluck(t+.09,370,.13);pluck(t+.18,440,.12);break;
       }
     }catch{/* Il gioco resta utilizzabile anche se il dispositivo non supporta l'audio. */}
   }
-  function stop(){for(const source of active){try{source.stop();}catch{}}active.clear();}
+  function stop(){generation++;for(const source of active){try{source.stop();}catch{}}active.clear();}
   return {unlock,play,stop};
 }
