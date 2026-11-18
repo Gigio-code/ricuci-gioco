@@ -1,7 +1,7 @@
 import { LEVELS, orderedLevels, nextLevelFor, CONSEQUENCES as C } from '../config.js';
 import { AGENTS } from '../catalog/agents.js';
 import { CONFLICTS } from '../catalog/conflicts.js';
-import { EFFICACY } from '../catalog/efficacy.js';
+import { EFFICACY } from '../catalog/efficacy.js?v=0.11';
 import { FRACTURE_STYLES } from '../rendering/fracture-styles.js';
 import { icon } from './icons.js';
 import { portrait, ART_COLORS, ART_ORDER } from './art.js';

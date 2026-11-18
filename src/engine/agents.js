@@ -1,7 +1,7 @@
 import { speedFactor, deviationEdge } from './consequences.js';
 import { blockedEdges, routeToFracture } from '../map/paths.js';
 import { edgeBetween, nodeAt } from '../map/network.js';
-import { contribute } from './repair.js';
+import { contribute } from './repair.js?v=0.11';
 export function assignTarget(state, agent, preferredId = null) {
   // Se è già su una strada, conclude soltanto quel tratto prima di cambiare itinerario.
   const origin = agent.to || agent.node;

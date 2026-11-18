@@ -1,5 +1,5 @@
 import { interventionFactor } from './consequences.js';
-import { EFFICACY } from '../catalog/efficacy.js';
+import { EFFICACY } from '../catalog/efficacy.js?v=0.11';
 import { AGENTS } from '../catalog/agents.js';
 import { CONFLICTS } from '../catalog/conflicts.js';
 import { logEvent } from './state.js';

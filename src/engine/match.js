@@ -1,7 +1,7 @@
 import { createState, logEvent } from './state.js';
 import { generateFracture, updatePropagation } from './generator.js';
 import { updateConsequences } from './consequences.js';
-import { updateAgents } from './agents.js';
+import { updateAgents } from './agents.js?v=0.11';
 import { calculateResults } from './results.js';
 function scheduledSpawn(state) {
   const stats = state.spawnStats;

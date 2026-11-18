@@ -1,7 +1,7 @@
 import { LEVELS, defaultDeckFor, orderedLevels, nextLevelFor } from '../config.js';
 import { AGENTS, DEFAULT_DECK } from '../catalog/agents.js';
 import { CONFLICTS } from '../catalog/conflicts.js';
-import { AGENT_ORDER, EFFICACY } from '../catalog/efficacy.js';
+import { AGENT_ORDER, EFFICACY } from '../catalog/efficacy.js?v=0.11';
 import { effectDescription, interventionFactor } from '../engine/consequences.js';
 import { calculateResults } from '../engine/results.js';
 import { icon } from './icons.js';

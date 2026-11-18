@@ -1,7 +1,7 @@
 import { AGENTS } from '../catalog/agents.js';
 import { nodeAt } from '../map/network.js';
 import { routeToFracture } from '../map/paths.js';
-import { assignTarget } from './agents.js';
+import { assignTarget } from './agents.js?v=0.11';
 import { logEvent } from './state.js';
 export function deploy(state, cardId, { gateId = null, fractureId = null, ownerId = 'local' } = {}) {
   if (state.phase !== 'playing') return { ok: false, reason: 'Avvia o riprendi la partita.' };

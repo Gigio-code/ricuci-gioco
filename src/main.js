@@ -1,17 +1,17 @@
-import { createPlayerStore, showPage, renderHome, renderRules } from './ui/navigation.js?v=0.7';
+import { createPlayerStore, showPage, renderHome, renderRules } from './ui/navigation.js?v=0.11';
 import { createDeckStore } from './progress/deck-store.js';
 import { createProgressStore, recordResult } from './progress/progress.js';
 import { LEVELS, nextLevelFor } from './config.js';
 import { AGENTS } from './catalog/agents.js';
 import { CONFLICTS } from './catalog/conflicts.js';
 import { TUTORIAL_ROLES } from './ui/tutorial-roles.js?v=0.10';
-import { EFFICACY } from './catalog/efficacy.js';
+import { EFFICACY } from './catalog/efficacy.js?v=0.11';
 import { portrait, ART_COLORS } from './ui/art.js';
-import { Match, start, togglePause } from './engine/match.js';
+import { Match, start, togglePause } from './engine/match.js?v=0.11';
 import { openFracture } from './engine/generator.js';
-import { deploy, redirect } from './engine/actions.js';
+import { deploy, redirect } from './engine/actions.js?v=0.11';
 import { ArenaRenderer } from './rendering/arena.js?v=0.10';
-import { Interface } from './ui/interface.js';
+import { Interface } from './ui/interface.js?v=0.11';
 import { createSoundPlayer } from './audio/sounds.js?v=0.10';
 import { createSoundEvents } from './audio/events.js';
 const $=id=>document.getElementById(id),ui=new Interface();
@@ -41,7 +41,7 @@ function rememberTutorial(){tutorialSeen=true;try{storage?.setItem(TUTORIAL_KEY,
 function clearTutorial(){tutorial=null;document.body.classList.remove('in-tutorial');delete document.body.dataset.tutorialCard;delete document.body.dataset.tutorialTarget;$('tutorial-bar').hidden=true;$('tactical-bar').hidden=false;$('timer').setAttribute('aria-label','Tempo rimanente');}
 function tutorialView(){
   if(!tutorial)return;
-  const steps={first:['1 / 4','Qui c’è Esclusione: Ascolto costa 1 energia e può dare 45 punti. Tocca la carta.'],target1:['2 / 4','Tocca la frattura rossa.'],moving1:['2 / 4','Ascolto sta arrivando: guarda il suo intervento.'],second:['3 / 4','Mancano 55 punti: Protezione può darli con 3 energie. Tocca la carta.'],target2:['4 / 4','Tocca di nuovo la stessa frattura.'],moving2:['4 / 4','Protezione sta arrivando: guarda la ricucitura.'],done:['FATTO!','Frattura ricucita: la strada è di nuovo aperta.']};
+  const steps={first:['1 / 4','Qui c’è Sfottò: Ascolto costa 1 energia e può dare 65 punti. Tocca la carta.'],target1:['2 / 4','Tocca la frattura rossa.'],moving1:['2 / 4','Ascolto sta arrivando: guarda il suo intervento.'],second:['3 / 4','Mancano 35 punti: Protezione può darli con 3 energie. Tocca la carta.'],target2:['4 / 4','Tocca di nuovo la stessa frattura.'],moving2:['4 / 4','Protezione sta arrivando: guarda la ricucitura.'],done:['FATTO!','Frattura ricucita: la strada è di nuovo aperta.']};
   const [label,message]=steps[tutorial.step];if($('tutorial-step-label').textContent!==label)$('tutorial-step-label').textContent=label;if($('tutorial-instruction').textContent!==message)$('tutorial-instruction').textContent=message;
   document.body.dataset.tutorialCard=({first:'ascolto',target1:'ascolto',second:'protezione',target2:'protezione'})[tutorial.step]||'';
   document.body.dataset.tutorialTarget=String(tutorial.step==='target1'||tutorial.step==='target2');
@@ -51,7 +51,7 @@ function startTutorial(){
   soundPlayer.stop();soundPlayer.unlock();
   const chosenLevel=Number($('level-select').value)||1;
   showPage('game');ui.reset();resultRecorded=false;match=new Match({level:1,config:{duration:3600}});start(match.state);match.state.nextSpawn=Infinity;
-  let fracture=null;for(const edge of match.state.map.edges){if(edge.fractureable&&(fracture=openFracture(match.state,edge.id,'esclusione')))break;}
+  let fracture=null;for(const edge of match.state.map.edges){if(edge.fractureable&&(fracture=openFracture(match.state,edge.id,'sfotto')))break;}
   if(!fracture){clearTutorial();launch(chosenLevel);return;}
   fracture.expiresAt=Infinity;tutorial={step:'first',fractureId:fracture.id,chosenLevel};soundEvents.begin(match.state,{tutorial:true});
   renderer=new ArenaRenderer($('arena'),match.state.map);document.body.classList.add('in-tutorial');$('tutorial-bar').hidden=false;$('tactical-bar').hidden=true;ui.update(match.state);renderer.render(match.state,ui);tutorialView();showTutorialRoles();
