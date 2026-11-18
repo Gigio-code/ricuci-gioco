@@ -39,10 +39,20 @@ function rememberTutorial(){tutorialSeen=true;try{storage?.setItem(TUTORIAL_KEY,
 function clearTutorial(){tutorial=null;document.body.classList.remove('in-tutorial');delete document.body.dataset.tutorialCard;delete document.body.dataset.tutorialTarget;$('tutorial-bar').hidden=true;$('tactical-bar').hidden=false;$('timer').setAttribute('aria-label','Tempo rimanente');}
 function tutorialView(){
   if(!tutorial)return;
-  const steps={first:['1 / 4','Qui c’è Sfottò: Ascolto costa 1 energia e può dare 65 punti. Tocca la carta.'],target1:['2 / 4','Tocca la frattura rossa.'],moving1:['2 / 4','Ascolto sta arrivando: guarda il suo intervento.'],second:['3 / 4','Mancano 35 punti: Protezione può darli con 3 energie. Tocca la carta.'],target2:['4 / 4','Tocca di nuovo la stessa frattura.'],moving2:['4 / 4','Protezione sta arrivando: guarda la ricucitura.'],done:['FATTO!','Frattura ricucita: la strada è di nuovo aperta.']};
+  const secondTarget=tutorial.firstPlacement==='fracture'?'gate':'fracture';
+  const target=tutorial.step==='target1'?'either':tutorial.step==='target2'?secondTarget:'';
+  const steps={
+    first:['1 / 4','Ecco uno Sfottò. Tocca Ascolto. Costa 1 energia e può ricucire 65 punti.'],
+    target1:['2 / 4','Tocca la frattura per scegliere la meta, oppure uno dei quattro ingressi per scegliere la partenza.'],
+    moving1:['2 / 4',tutorial.firstPlacement==='gate'?'Hai scelto la partenza. Ascolto cerca una frattura da raggiungere.':'Hai scelto la meta. Ascolto parte dall’ingresso più vicino con una strada aperta.'],
+    second:['3 / 4','Mancano 35 punti. Tocca Protezione per completare la ricucitura con 3 energie.'],
+    target2:['4 / 4',secondTarget==='gate'?'Ora scegli la partenza. Tocca uno dei quattro ingressi illuminati.':'Ora scegli la meta. Tocca la frattura illuminata.'],
+    moving2:['4 / 4',secondTarget==='gate'?'Protezione parte dall’ingresso che hai scelto e cerca una frattura.':'Protezione raggiunge la frattura che hai scelto.'],
+    done:['FATTO!','Tocca una frattura per scegliere la meta, oppure un ingresso per scegliere la partenza.']
+  };
   const [label,message]=steps[tutorial.step];if($('tutorial-step-label').textContent!==label)$('tutorial-step-label').textContent=label;if($('tutorial-instruction').textContent!==message)$('tutorial-instruction').textContent=message;
   document.body.dataset.tutorialCard=({first:'ascolto',target1:'ascolto',second:'protezione',target2:'protezione'})[tutorial.step]||'';
-  document.body.dataset.tutorialTarget=String(tutorial.step==='target1'||tutorial.step==='target2');
+  if(document.body.dataset.tutorialTarget!==target)document.body.dataset.tutorialTarget=target;
   $('tutorial-continue').hidden=tutorial.step!=='done';$('tutorial-skip').hidden=tutorial.step==='done';$('timer').textContent='PROVA';$('timer').setAttribute('aria-label','Tutorial, senza limite di tempo');
 }
 function startTutorial(){
@@ -94,8 +104,24 @@ function beginFromHome(forceTutorial=false){
 $('tutorial-replay').addEventListener('click',()=>beginFromHome(true));$('rules-tutorial').addEventListener('click',()=>beginFromHome(true));
 function send(options){
   if(!ui.selectedCard){ui.message('Scegli prima una carta nella tua mano.');return;}
+  const placement=options.gateId?'gate':'fracture';
+  if(tutorial){
+    if(tutorial.step!=='target1'&&tutorial.step!=='target2')return;
+    if(tutorial.step==='target2'&&tutorial.firstPlacement===placement){
+      ui.message($('tutorial-instruction').textContent);
+      return;
+    }
+  }
   const result=deploy(match.state,ui.selectedCard,options);
-  if(result.ok){if(tutorial)tutorial.step=tutorial.step==='target1'?'moving1':'moving2';const gate=match.state.map.gates.find(g=>g.id===result.agent.node);const name=ui.selectedCard;soundPlayer.unlock();soundEvents.deployed(name,result);ui.clearSelection();ui.selectedAgent=result.agent.id;ui.gateFeedback={id:gate.id,until:performance.now()+1800};ui.message(`${AGENTS[name].name} inviato dall’ingresso ${gate.direction}.`);}else ui.message(result.reason);
+  if(result.ok){
+    if(tutorial){
+      if(tutorial.step==='target1'){
+        tutorial.firstPlacement=placement;
+        tutorial.step='moving1';
+      }else tutorial.step='moving2';
+      tutorialView();
+    }
+    const gate=match.state.map.gates.find(g=>g.id===result.agent.node);const name=ui.selectedCard;soundPlayer.unlock();soundEvents.deployed(name,result);ui.clearSelection();ui.selectedAgent=result.agent.id;ui.gateFeedback={id:gate.id,until:performance.now()+1800};ui.message(`${AGENTS[name].name} inviato dall’ingresso ${gate.direction}.`);}else ui.message(result.reason);
   ui.update(match.state);
 }
 function targetFracture(id){
@@ -116,7 +142,7 @@ $('deploy-button').addEventListener('click',()=>send({gateId:$('gate-select').va
 function mapAction(e){
   if(match.state.phase!=='playing')return;
   const gate=e.target.closest('[data-gate]'),fracture=e.target.closest('[data-fracture]'),agent=e.target.closest('[data-agent]');
-  if(gate&&!tutorial)send({gateId:gate.dataset.gate});else if(fracture)targetFracture(Number(fracture.dataset.fracture));else if(agent&&!tutorial)ui.selectAgent(Number(agent.dataset.agent),match.state);
+  if(gate)send({gateId:gate.dataset.gate});else if(fracture)targetFracture(Number(fracture.dataset.fracture));else if(agent&&!tutorial)ui.selectAgent(Number(agent.dataset.agent),match.state);
 }
 $('arena').addEventListener('click',mapAction);$('arena').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();mapAction(e);}});
 $('medal-button').addEventListener('click',()=>{if(match.state.phase==='playing')togglePause(match.state);ui.update(match.state);ui.showMedals();});$('close-medals').addEventListener('click',()=>$('medal-dialog').close());
