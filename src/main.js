@@ -4,14 +4,15 @@ import { createProgressStore, recordResult } from './progress/progress.js';
 import { LEVELS, nextLevelFor } from './config.js';
 import { AGENTS } from './catalog/agents.js';
 import { CONFLICTS } from './catalog/conflicts.js';
-import { TUTORIAL_ROLES } from './ui/tutorial-roles.js';
+import { TUTORIAL_ROLES } from './ui/tutorial-roles.js?v=0.10';
+import { EFFICACY } from './catalog/efficacy.js';
 import { portrait, ART_COLORS } from './ui/art.js';
 import { Match, start, togglePause } from './engine/match.js';
 import { openFracture } from './engine/generator.js';
 import { deploy, redirect } from './engine/actions.js';
-import { ArenaRenderer } from './rendering/arena.js?v=0.9';
+import { ArenaRenderer } from './rendering/arena.js?v=0.10';
 import { Interface } from './ui/interface.js';
-import { createSoundPlayer } from './audio/sounds.js';
+import { createSoundPlayer } from './audio/sounds.js?v=0.10';
 import { createSoundEvents } from './audio/events.js';
 const $=id=>document.getElementById(id),ui=new Interface();
 const soundPlayer=createSoundPlayer(),soundEvents=createSoundEvents((event,delay)=>soundPlayer.play(event,delay));
@@ -40,7 +41,7 @@ function rememberTutorial(){tutorialSeen=true;try{storage?.setItem(TUTORIAL_KEY,
 function clearTutorial(){tutorial=null;document.body.classList.remove('in-tutorial');delete document.body.dataset.tutorialCard;delete document.body.dataset.tutorialTarget;$('tutorial-bar').hidden=true;$('tactical-bar').hidden=false;$('timer').setAttribute('aria-label','Tempo rimanente');}
 function tutorialView(){
   if(!tutorial)return;
-  const steps={first:['1 / 4','Ascolto aiuta a capire. Tocca la sua carta.'],target1:['2 / 4','Tocca la frattura rossa.'],moving1:['2 / 4','Ascolto sta arrivando: guarda il suo intervento.'],second:['3 / 4','Protezione aiuta le persone a sentirsi al sicuro. Tocca la sua carta.'],target2:['4 / 4','Tocca di nuovo la stessa frattura.'],moving2:['4 / 4','Protezione sta arrivando: guarda la ricucitura.'],done:['FATTO!','Frattura ricucita: la strada è di nuovo aperta.']};
+  const steps={first:['1 / 4','Qui c’è Esclusione: Ascolto costa 1 energia e può dare 45 punti. Tocca la carta.'],target1:['2 / 4','Tocca la frattura rossa.'],moving1:['2 / 4','Ascolto sta arrivando: guarda il suo intervento.'],second:['3 / 4','Mancano 55 punti: Protezione può darli con 3 energie. Tocca la carta.'],target2:['4 / 4','Tocca di nuovo la stessa frattura.'],moving2:['4 / 4','Protezione sta arrivando: guarda la ricucitura.'],done:['FATTO!','Frattura ricucita: la strada è di nuovo aperta.']};
   const [label,message]=steps[tutorial.step];if($('tutorial-step-label').textContent!==label)$('tutorial-step-label').textContent=label;if($('tutorial-instruction').textContent!==message)$('tutorial-instruction').textContent=message;
   document.body.dataset.tutorialCard=({first:'ascolto',target1:'ascolto',second:'protezione',target2:'protezione'})[tutorial.step]||'';
   document.body.dataset.tutorialTarget=String(tutorial.step==='target1'||tutorial.step==='target2');
@@ -75,7 +76,7 @@ function renderTutorialRoles(){
   const start=tutorialRolesPage*4;
   $('tutorial-roles-page').textContent=`${tutorialRolesPage+1} / 2`;
   $('tutorial-roles-note').textContent=tutorialRolesPage===0?'I primi quattro sono disponibili subito.':'Questi personaggi si sbloccano nelle formazioni successive.';
-  $('tutorial-roles-list').innerHTML=TUTORIAL_ROLES.slice(start,start+4).map(role=>`<article class="tutorial-role" style="--agent-color:${ART_COLORS[role.id]}">${portrait(role.id)}<div><b>${AGENTS[role.id].name}</b><p>${role.text}</p></div></article>`).join('');
+  $('tutorial-roles-list').innerHTML=TUTORIAL_ROLES.slice(start,start+4).map(role=>`<article class="tutorial-role" style="--agent-color:${ART_COLORS[role.id]}">${portrait(role.id)}<div><b>${AGENTS[role.id].name}</b><p>Costa <strong>${AGENTS[role.id].cost} energia</strong>. ${role.text}</p><p>Utile per: <strong>${Object.values(CONFLICTS).map(f=>({name:f.name,points:EFFICACY[f.id][role.id]})).sort((a,b)=>b.points-a.points).slice(0,2).map(f=>`${f.name} +${f.points}`).join(' · ')}</strong></p></div></article>`).join('');
   $('tutorial-roles-back').hidden=tutorialRolesPage===0;
   $('tutorial-roles-skip').hidden=tutorialRolesPage===1;
   $('tutorial-roles-next').textContent=tutorialRolesPage===0?'Avanti →':'Proviamo! →';
