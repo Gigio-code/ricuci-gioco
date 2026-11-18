@@ -10,7 +10,7 @@ export function createSoundPlayer({contextFactory}={}) {
 
   function loadCard(card) {
     if (recordings.has(card)) return recordings.get(card);
-    const url = new URL('../../assets/audio/' + card + '.wav', import.meta.url);
+    const url = new URL('../../assets/audio/' + card + '.wav?v=0.13', import.meta.url);
     const recording = fetch(url)
       .then(response => {
         if (!response.ok) throw new Error('Audio ' + response.status);

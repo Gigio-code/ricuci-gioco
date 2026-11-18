@@ -12,7 +12,7 @@ import { openFracture } from './engine/generator.js';
 import { deploy, redirect } from './engine/actions.js?v=0.11';
 import { ArenaRenderer } from './rendering/arena.js?v=0.10';
 import { Interface } from './ui/interface.js?v=0.11';
-import { createSoundPlayer } from './audio/sounds.js?v=0.12';
+import { createSoundPlayer } from './audio/sounds.js?v=0.13';
 import { createSoundEvents } from './audio/events.js';
 const $=id=>document.getElementById(id),ui=new Interface();
 const soundPlayer=createSoundPlayer(),soundEvents=createSoundEvents((event,delay)=>soundPlayer.play(event,delay));
